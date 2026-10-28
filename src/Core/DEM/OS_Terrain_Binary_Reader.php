@@ -75,24 +75,24 @@ class OS_Terrain_Binary_Reader {
         $relN = $northing - $origin[1];
 
         // Bounds check inside the 100km square
-        if ( $relE < 0 || $relE > 99950 || $relN < 0 || $relN > 99950 ) {
+        if ( $relE < 0 || $relE >= 100000 || $relN < 0 || $relN >= 100000 ) {
             return null;
         }
 
         if ( ! $interpolate ) {
-            $col = (int) round( $relE / self::CELL_SIZE_METRES );
-            $row = (int) round( $relN / self::CELL_SIZE_METRES );
+            $col = min( (int) round( $relE / self::CELL_SIZE_METRES ), self::GRID_DIMENSION - 1 );
+            $row = min( (int) round( $relN / self::CELL_SIZE_METRES ), self::GRID_DIMENSION - 1 );
             return $this->readNodeElevation( $square, $col, $row );
         }
 
         // 4-point bilinear interpolation
-        $col0 = (int) floor( $relE / self::CELL_SIZE_METRES );
-        $row0 = (int) floor( $relN / self::CELL_SIZE_METRES );
+        $col0 = min( (int) floor( $relE / self::CELL_SIZE_METRES ), self::GRID_DIMENSION - 1 );
+        $row0 = min( (int) floor( $relN / self::CELL_SIZE_METRES ), self::GRID_DIMENSION - 1 );
         $col1 = min( $col0 + 1, self::GRID_DIMENSION - 1 );
         $row1 = min( $row0 + 1, self::GRID_DIMENSION - 1 );
 
-        $dx = ( $relE - $col0 * self::CELL_SIZE_METRES ) / (float) self::CELL_SIZE_METRES;
-        $dy = ( $relN - $row0 * self::CELL_SIZE_METRES ) / (float) self::CELL_SIZE_METRES;
+        $dx = ( $col0 === $col1 ) ? 0.0 : min( 1.0, max( 0.0, ( $relE - $col0 * self::CELL_SIZE_METRES ) / (float) self::CELL_SIZE_METRES ) );
+        $dy = ( $row0 === $row1 ) ? 0.0 : min( 1.0, max( 0.0, ( $relN - $row0 * self::CELL_SIZE_METRES ) / (float) self::CELL_SIZE_METRES ) );
 
         $z00 = $this->readNodeElevation( $square, $col0, $row0 );
         $z10 = $this->readNodeElevation( $square, $col1, $row0 );

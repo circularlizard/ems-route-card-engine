@@ -20,6 +20,7 @@ use SimpleXMLElement;
 
 class GPX_Enrichment_Service {
     public const MAX_SEGMENT_DISTANCE_M = 25.0; // Interpolate vertices if gap > 25m
+    public const ELEVATION_HYSTERESIS_THRESHOLD_M = 3.0; // Filter micro-undulation noise on densified tracks
 
     private OSGB36_Converter $converter;
     private OS_Terrain_Binary_Reader $demReader;
@@ -282,6 +283,8 @@ class GPX_Enrichment_Service {
         $prevE           = null;
         $prevN           = null;
         $prevEle         = null;
+        $anchorEle       = null;
+        $pointCount      = count( $points );
 
         foreach ( $points as $idx => $pt ) {
             $osCoords = $this->converter->wgs84ToOsgb36( $pt['lat'], $pt['lon'] );
@@ -293,19 +296,34 @@ class GPX_Enrichment_Service {
 
             // Sample DEM elevation
             $demEle = $this->demReader->getElevation( $easting, $northing, true );
-            $ele    = $demEle ?? ( $pt['ele_gpx'] ?? 0.0 );
+            $ele    = $demEle ?? ( $pt['ele_gpx'] ?? ( $prevEle ?? 0.0 ) );
 
-            if ( null !== $prevE && null !== $prevN && null !== $prevEle ) {
+            if ( null !== $prevE && null !== $prevN ) {
                 $dx = $easting - $prevE;
                 $dy = $northing - $prevN;
                 $stepDist = sqrt( $dx * $dx + $dy * $dy );
                 $cumDistM += $stepDist;
+            }
 
-                $dEle = $ele - $prevEle;
-                if ( $dEle > 0.0 ) {
-                    $cumAscentM += $dEle;
-                } else {
-                    $cumDescentM += abs( $dEle );
+            // Hysteresis elevation accumulation to filter micro-undulation noise
+            if ( null === $anchorEle ) {
+                $anchorEle = $ele;
+            } else {
+                $dEle = $ele - $anchorEle;
+                if ( abs( $dEle ) >= self::ELEVATION_HYSTERESIS_THRESHOLD_M ) {
+                    if ( $dEle > 0.0 ) {
+                        $cumAscentM += $dEle;
+                    } else {
+                        $cumDescentM += abs( $dEle );
+                    }
+                    $anchorEle = $ele;
+                } elseif ( $idx === $pointCount - 1 && abs( $dEle ) > 0.0 ) {
+                    // Flush residual delta at final endpoint
+                    if ( $dEle > 0.0 ) {
+                        $cumAscentM += $dEle;
+                    } else {
+                        $cumDescentM += abs( $dEle );
+                    }
                 }
             }
 
