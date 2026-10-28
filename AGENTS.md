@@ -53,3 +53,11 @@ vendor/bin/phpstan analyse
 - **Zero-WP Pure PHP Core**: Elevation lookups, DEM reading, and Naismith calculation logic are decoupled from WordPress APIs to allow 100% fast, dependency-free unit testing.
 - **Provider Pattern**: Host-application data bindings (teams, expeditions) are injected via adapters; defaults to standalone provider if EMS is inactive.
 - **Elevation Binary Tiles**: OS Terrain 50 data is pre-compiled into lightweight 10km raw binary grid files (`.bin`, 80KB each) and cached in memory per tile.
+
+---
+
+## 6. Frontend & UI Guidelines
+
+- **Iconography**: Always use **FontAwesome icons** (`@fortawesome/react-fontawesome` and `@fortawesome/free-solid-svg-icons`) for all UI icons. **Do NOT use native WordPress Dashicons or `@wordpress/icons`**.
+- **Responsive Architecture**: Desktop 12-column route tables must transform into touch-friendly vertical accordion cards on viewports `< 768px`.
+- **Zero Latency**: Route manipulations (leg splitting, bearings, Naismith calculations) run instantaneously in the browser from the pre-enriched track array without server round-trips.
