@@ -9,25 +9,353 @@
     padding: 24px;
     margin-top: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 }
 
 .ems-route-card-studio__header h2 {
     margin: 0 0 8px 0;
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 600;
     color: #0f172a;
 }
 
 .ems-route-card-studio__header p {
-    margin: 0 0 16px 0;
+    margin: 0 0 20px 0;
     color: #64748b;
     font-size: 14px;
 }
 
-.ems-route-card-studio__panel {
+/* Tabs */
+.ems-studio-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 24px;
+}
+
+.ems-studio-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.ems-studio-tab:hover {
+    color: #0f172a;
+}
+
+.ems-studio-tab--active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+
+/* Overview Stat Cards */
+.dem-tile-manager__overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dem-stat-card {
     background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dem-stat-card__icon {
+    font-size: 24px;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.dem-stat-card__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.dem-stat-card__val {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 4px;
+}
+
+.dem-stat-card__val--sm {
+    font-size: 13px;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.dem-stat-card__subval {
+    font-size: 14px;
+    font-weight: 400;
+    color: #64748b;
+    margin-left: 8px;
+}
+
+/* Alert Banners */
+.dem-alert {
+    padding: 12px 16px;
     border-radius: 6px;
-    padding: 24px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.dem-alert--success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.dem-alert--error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+/* Upload Dropzone */
+.dem-upload-zone {
+    border: 2px dashed #94a3b8;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 32px 20px;
     text-align: center;
+    margin-bottom: 28px;
+    transition: all 0.2s ease-in-out;
+}
+
+.dem-upload-zone:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.dem-upload-zone--uploading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.dem-upload-zone__icon {
+    font-size: 32px;
+    color: #3b82f6;
+    margin-bottom: 12px;
+}
+
+.dem-upload-zone h3 {
+    margin: 0 0 6px 0;
+    font-size: 16px;
+    color: #0f172a;
+}
+
+.dem-upload-zone p {
+    margin: 0 0 16px 0;
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Toolbar */
+.dem-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.dem-toolbar__filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dem-toolbar__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.dem-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.dem-search-box__icon {
+    position: absolute;
+    left: 10px;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.dem-search-box input {
+    padding-left: 30px !important;
+    min-width: 240px;
+    height: 32px;
+    font-size: 13px;
+}
+
+/* Tiles Grid */
+.dem-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.dem-tile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.15s ease-in-out;
+}
+
+.dem-tile-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+.dem-tile-card--installed {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.dem-tile-card--invalid {
+    border-color: #fed7aa;
+    background: #fffbeb;
+}
+
+.dem-tile-card--missing {
+    border-color: #f1f5f9;
+    background: #f8fafc;
+    opacity: 0.85;
+}
+
+.dem-tile-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.dem-tile-card__code {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #0f172a;
+}
+
+/* Badges */
+.dem-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.dem-badge--success {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.dem-badge--warning {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.dem-badge--neutral {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+/* Body */
+.dem-tile-card__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dem-tile-card__region {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.dem-tile-card__details {
+    font-size: 11px;
     color: #475569;
+    margin-bottom: 8px;
+}
+
+.dem-tile-card__benchmark {
+    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.dem-tile-card__benchmark--pass {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.dem-tile-card__benchmark--fail {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Footer */
+.dem-tile-card__footer {
+    border-top: 1px solid #f1f5f9;
+    padding-top: 10px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dem-tile-card__missing-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.button-link-delete {
+    background: none !important;
+    border: none !important;
+    color: #ef4444 !important;
+    cursor: pointer;
+    font-size: 12px !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.button-link-delete:hover {
+    color: #b91c1c !important;
+    text-decoration: underline;
 }

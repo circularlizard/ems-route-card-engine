@@ -24,6 +24,7 @@ class Plugin {
     }
 
     public static function register_rest_routes(): void {
-        // Will register /ems-route/v1 routes
+        $demController = new \EMSRoute\Core\REST\DEM_Management_Controller();
+        $demController->register_routes();
     }
 }
