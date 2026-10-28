@@ -1,0 +1,28 @@
+{
+    "name": "ems/ems-route-card-engine",
+    "description": "Local terrain engine and GPX route card builder for DofE expeditions",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "EMSRoute\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.1",
+        "dompdf/dompdf": "^2.0 || ^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10",
+        "brain/monkey": "^2.6",
+        "mockery/mockery": "^1.6",
+        "phpstan/phpstan": "^1.11",
+        "szepeviktor/phpstan-wordpress": "^1.3",
+        "php-stubs/wordpress-stubs": "^6.5"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EMSRoute\\Tests\\": "tests/"
+        }
+    }
+}

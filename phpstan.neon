@@ -1,0 +1,14 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    parallel:
+        maximumNumberOfProcesses: 1
+    paths:
+        - src
+    excludePaths:
+        - vendor
+        - node_modules
+    bootstrapFiles:
+        - ems-route-card-engine.php

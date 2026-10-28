@@ -1,0 +1,28 @@
+{
+    "name": "ems-route-card-engine",
+    "private": true,
+    "version": "0.1.0",
+    "scripts": {
+        "build": "vite build",
+        "typecheck": "tsc --noEmit",
+        "test": "tsc --noEmit && vitest run --passWithNoTests"
+    },
+    "devDependencies": {
+        "@testing-library/jest-dom": "^6.6.0",
+        "@testing-library/react": "^16.0.0",
+        "@types/node": "^22.0.0",
+        "@types/react": "^18.3.0",
+        "@types/react-dom": "^18.3.0",
+        "@vitejs/plugin-react": "^4.3.0",
+        "jsdom": "^25.0.0",
+        "react": "^18.3.0",
+        "react-dom": "^18.3.0",
+        "typescript": "^5.6.0",
+        "vitest": "^2.1.0"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-svg-core": "^7.3.1",
+        "@fortawesome/free-solid-svg-icons": "^7.3.1",
+        "@fortawesome/react-fontawesome": "^3.5.0"
+    }
+}

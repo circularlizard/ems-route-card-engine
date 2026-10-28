@@ -1,0 +1,33 @@
+/**
+ * EMS Route Card & Terrain Engine Styles
+ */
+
+.ems-route-card-studio {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ems-route-card-studio__header h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: #0f172a;
+}
+
+.ems-route-card-studio__header p {
+    margin: 0 0 16px 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.ems-route-card-studio__panel {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 24px;
+    text-align: center;
+    color: #475569;
+}
