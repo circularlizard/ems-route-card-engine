@@ -21,8 +21,6 @@ abstract class TestCase extends PHPUnitTestCase {
         Functions\when( 'esc_html__' )->returnArg( 1 );
         Functions\when( 'esc_attr__' )->returnArg( 1 );
         Functions\when( 'sanitize_text_field' )->returnArg( 1 );
-        Functions\when( 'apply_filters' )->returnArg( 2 );
-        Functions\when( 'do_action' )->justReturn( null );
         Functions\when( 'current_user_can' )->justReturn( true );
         Functions\when( 'get_current_user_id' )->justReturn( 1 );
     }

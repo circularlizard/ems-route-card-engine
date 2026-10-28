@@ -26,5 +26,8 @@ class Plugin {
     public static function register_rest_routes(): void {
         $demController = new \EMSRoute\Core\REST\DEM_Management_Controller();
         $demController->register_routes();
+
+        $routeCardController = new \EMSRoute\Core\REST\Route_Card_Controller();
+        $routeCardController->register_routes();
     }
 }
