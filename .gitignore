@@ -5,6 +5,8 @@ vendor/
 # Build artifacts & temp
 dist/
 temp/
+dem-data/
+*.bin
 assets/js/*.js
 assets/js/*.css
 assets/build-manifest.json
