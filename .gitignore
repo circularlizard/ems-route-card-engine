@@ -22,3 +22,7 @@ Thumbs.db
 # Environment & Local secrets
 .env
 .env.local
+
+# Agent skills
+.agents/
+skills-lock.json
