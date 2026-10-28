@@ -5,9 +5,10 @@ set -e
 # Usage: bash bin/deploy.sh
 
 PLUGIN_NAME="ems-route-card-engine"
-WP_CONTAINER_DIR="../expedition-management-system/wordpress/wp-content/plugins"
-TARGET_DIR="${WP_PLUGINS_DIR:-$WP_CONTAINER_DIR}/$PLUGIN_NAME"
-STAGING_DIR="temp/ems-route-card-engine-deploy"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WP_ENV_DIR="${WP_ENV_DIR:-$(cd "$SCRIPT_DIR/../../wordpress-env" 2>/dev/null && pwd)}"
+TARGET_DIR="${WP_PLUGINS_DIR:-$WP_ENV_DIR/wordpress/wp-content/plugins}/$PLUGIN_NAME"
+STAGING_DIR="$SCRIPT_DIR/../temp/ems-route-card-engine-deploy"
 
 echo "==> Deploying $PLUGIN_NAME to $TARGET_DIR..."
 
@@ -51,10 +52,10 @@ rsync -a --delete "$STAGING_DIR/$PLUGIN_NAME/" "$TARGET_DIR/"
 # 6. Clean up
 rm -rf "$STAGING_DIR"
 
-# 7. Try to activate via WP-CLI in EMS docker environment if available
-if [ -d "../expedition-management-system" ] && command -v docker >/dev/null 2>&1; then
+# 7. Try to activate via WP-CLI in shared docker environment if available
+if [ -d "$WP_ENV_DIR" ] && command -v docker >/dev/null 2>&1; then
   echo "==> Refreshing plugin status in local WordPress container..."
-  (cd ../expedition-management-system && docker compose run --rm wpcli plugin activate $PLUGIN_NAME --quiet 2>/dev/null) || true
+  (cd "$WP_ENV_DIR" && docker compose run --rm wpcli plugin activate $PLUGIN_NAME --quiet 2>/dev/null) || true
 fi
 
 echo "==> Done! $PLUGIN_NAME deployed successfully."
