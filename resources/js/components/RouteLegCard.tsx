@@ -51,7 +51,7 @@ export function RouteLegCard({
     // Auto-scroll active card into view when selected
     useEffect(() => {
         if (isActive && cardRef.current && typeof cardRef.current.scrollIntoView === 'function') {
-            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, [isActive]);
 

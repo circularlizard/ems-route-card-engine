@@ -881,6 +881,7 @@
     transition: all 0.15s ease-in-out;
     border-left: 4px solid #94a3b8;
     cursor: pointer;
+    scroll-margin-top: 50px;
 }
 
 .ems-leg-card:hover {
