@@ -32,6 +32,8 @@ export function RouteMap({
     const mapInstanceRef = useRef<L.Map | null>(null);
     const routeLayerGroupRef = useRef<L.LayerGroup | null>(null);
     const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
+    const loadedRouteSigRef = useRef<string>('');
+    const prevActiveLegIndexRef = useRef<number | null>(null);
 
     const [baseLayer, setBaseLayer] = useState<'cyclosm' | 'esri' | 'osm' | 'opentopo' | 'os'>('cyclosm');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -236,35 +238,58 @@ export function RouteMap({
                 }
             }
         });
-
-        // 4. Fit bounds on initial load
-        if (activeLegIndex === 0 && legs.length > 0) {
-            const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
-            map.fitBounds(allCoords, { padding: [25, 25] });
-        }
     }, [vertices, legs, activeLegIndex, onRequestSplitAtVertex, onSelectLeg]);
 
-    // Pan / Zoom smoothly when active leg changes
+    // Fit entire route bounds on new route import or day switch
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map || vertices.length < 2) {
+            if (vertices.length === 0) {
+                loadedRouteSigRef.current = '';
+            }
+            return;
+        }
+
+        // Generate a signature for the route (start coord + end coord + approximate vertex count)
+        const vStart = vertices[0];
+        const vEnd = vertices[vertices.length - 1];
+        const sig = `${vertices.length}-${vStart.lat.toFixed(4)},${vStart.lon.toFixed(4)}-${vEnd.lat.toFixed(4)},${vEnd.lon.toFixed(4)}`;
+
+        if (loadedRouteSigRef.current !== sig) {
+            loadedRouteSigRef.current = sig;
+            // Prevent active leg effect from immediately overwriting whole route view on import
+            prevActiveLegIndexRef.current = activeLegIndex;
+
+            const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
+            map.fitBounds(allCoords, { padding: [35, 35] });
+        }
+    }, [vertices, activeLegIndex]);
+
+    // Pan / Zoom smoothly when active leg changes via user selection
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map || vertices.length === 0 || !legs[activeLegIndex]) return;
 
-        const leg = legs[activeLegIndex];
-        const legCoords: [number, number][] = [];
-        for (let v = leg.start_vertex_index; v <= leg.end_vertex_index; v++) {
-            if (vertices[v]) {
-                legCoords.push([vertices[v].lat, vertices[v].lon]);
+        // Only zoom if the user actually switched legs (not on import or split)
+        if (prevActiveLegIndexRef.current !== null && prevActiveLegIndexRef.current !== activeLegIndex) {
+            const leg = legs[activeLegIndex];
+            const legCoords: [number, number][] = [];
+            for (let v = leg.start_vertex_index; v <= leg.end_vertex_index; v++) {
+                if (vertices[v]) {
+                    legCoords.push([vertices[v].lat, vertices[v].lon]);
+                }
+            }
+
+            if (legCoords.length >= 2) {
+                map.fitBounds(legCoords, {
+                    padding: [45, 45],
+                    maxZoom: 15,
+                    animate: true,
+                    duration: 0.5,
+                });
             }
         }
-
-        if (legCoords.length >= 2) {
-            map.fitBounds(legCoords, {
-                padding: [40, 40],
-                maxZoom: 15,
-                animate: true,
-                duration: 0.6,
-            });
-        }
+        prevActiveLegIndexRef.current = activeLegIndex;
     }, [activeLegIndex, legs, vertices]);
 
     // Update hover crosshair cursor along the route

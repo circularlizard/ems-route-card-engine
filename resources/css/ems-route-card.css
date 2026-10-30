@@ -905,8 +905,9 @@
 .ems-leg-card__title-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex: 1;
+    flex-wrap: wrap;
 }
 
 .ems-leg-badge {
@@ -917,16 +918,59 @@
     padding: 3px 8px;
     border-radius: 4px;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.ems-leg-title {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 700;
-    color: #0f172a;
+.ems-leg-endpoints {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.ems-endpoint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ems-endpoint-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.ems-endpoint-input {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 6px;
+    background: transparent;
+    transition: all 0.15s ease-in-out;
+    max-width: 150px;
+}
+
+.ems-endpoint-input:hover {
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+.ems-endpoint-input:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.ems-endpoint-meta {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+    white-space: nowrap;
 }
 
 .ems-arrow-icon {
@@ -934,52 +978,11 @@
     color: #94a3b8;
 }
 
-.ems-leg-name-editor {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
 .ems-input-sm {
     padding: 4px 8px;
     font-size: 13px;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
-}
-
-/* Checkpoints Badges */
-.ems-leg-checkpoints-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    background: #f8fafc;
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
-}
-
-.ems-checkpoint-pill {
-    display: flex;
-    flex-direction: column;
-}
-
-.ems-pill-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 0.05em;
-}
-
-.ems-pill-val {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0f172a;
-}
-
-.ems-pill-coord {
-    font-size: 11px;
-    color: #64748b;
-    font-family: monospace;
 }
 
 /* Metrics Row */
