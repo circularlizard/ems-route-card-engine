@@ -1,7 +1,6 @@
 import { useId, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faArrowRight,
     faMountain,
     faClock,
     faRoute,
@@ -21,6 +20,7 @@ interface RouteLegCardProps {
     vertices?: RouteVertex[];
     isActive: boolean;
     isLastLeg: boolean;
+    nextLegStartName?: string;
     onSelect: () => void;
     onUpdateLeg: (updatedLeg: RouteLeg) => void;
     onSplitLeg: () => void;
@@ -32,6 +32,7 @@ export function RouteLegCard({
     vertices,
     isActive,
     isLastLeg,
+    nextLegStartName,
     onSelect,
     onUpdateLeg,
     onSplitLeg,
@@ -46,10 +47,16 @@ export function RouteLegCard({
     const restMinsId = useId();
     const activityNotesId = useId();
 
-    // Auto-scroll active card into view when selected
+    const isFirstRenderRef = useRef(true);
+
+    // Auto-scroll active card into view when selected by user
     useEffect(() => {
+        if (isFirstRenderRef.current) {
+            isFirstRenderRef.current = false;
+            return;
+        }
         if (isActive && cardRef.current && typeof cardRef.current.scrollIntoView === 'function') {
-            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }, [isActive]);
 
@@ -58,7 +65,9 @@ export function RouteLegCard({
     const vEnd = vertices && vertices[leg.end_vertex_index];
 
     const startName = leg.start_name || (leg as any).checkpoint_from || (leg.leg_number === 1 ? 'Start' : `Checkpoint ${leg.leg_number}`);
-    const endName = leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`);
+    const resolvedEndName = !isLastLeg && nextLegStartName !== undefined
+        ? nextLegStartName
+        : (leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`));
 
     const startGrid = leg.start_grid_ref || (leg as any).start_grid_ref_6 || vStart?.grid_ref_6 || '';
     const endGrid = leg.end_grid_ref || (leg as any).end_grid_ref_6 || vEnd?.grid_ref_6 || '';
@@ -88,8 +97,8 @@ export function RouteLegCard({
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         const updatedLeg: any = {
             ...leg,
-            start_name: startName,
-            end_name: endName,
+            start_name: field === 'start_name' ? value : startName,
+            end_name: field === 'end_name' ? value : resolvedEndName,
             start_grid_ref: startGrid,
             end_grid_ref: endGrid,
             start_elevation_m: startEle,
@@ -108,7 +117,7 @@ export function RouteLegCard({
             className={`ems-leg-card ${isActive ? 'ems-leg-card--active' : ''}`}
             onClick={onSelect}
         >
-            {/* Line 1: Clear Header with Contrasting Background, Leg Number, and Start ➔ End Checkpoints */}
+            {/* Line 1: Header with Leg Number in Top Left and Start / End Checkpoints */}
             <div className="ems-leg-card__line-1">
                 <span className="ems-leg-number-badge" title={`Leg ${leg.leg_number}`}>
                     {leg.leg_number}
@@ -133,19 +142,19 @@ export function RouteLegCard({
                         </div>
                     </div>
 
-                    <FontAwesomeIcon icon={faArrowRight} className="ems-arrow-icon" />
-
                     <div className="ems-endpoint">
                         <span className="ems-endpoint-label">To:</span>
                         <div className="ems-endpoint-col">
                             <input
                                 id={endNameId}
                                 type="text"
-                                className="ems-endpoint-input"
-                                value={endName}
+                                className={`ems-endpoint-input ${!isLastLeg ? 'ems-endpoint-input--readonly' : ''}`}
+                                value={resolvedEndName}
+                                readOnly={!isLastLeg}
+                                tabIndex={!isLastLeg ? -1 : 0}
                                 onChange={(e) => handleTextChange('end_name', e.target.value)}
                                 placeholder="End point"
-                                title="Edit end checkpoint name"
+                                title={!isLastLeg ? `Linked to start of Leg ${leg.leg_number + 1}` : 'Edit finish checkpoint name'}
                             />
                             {endGrid && (
                                 <span className="ems-endpoint-meta">{endGrid} • {Math.round(endEle)}m</span>
@@ -250,7 +259,7 @@ export function RouteLegCard({
             <div className="ems-leg-card__line-6 ems-leg-project-row" onClick={(e) => e.stopPropagation()}>
                 <div className="ems-leg-input-block ems-leg-input-block--time">
                     <label htmlFor={restMinsId} className="ems-field-label">
-                        <FontAwesomeIcon icon={faCoffee} /> Project & Rest Time
+                        <FontAwesomeIcon icon={faCoffee} /> Project & Rest
                     </label>
                     <div className="ems-time-inputs-group">
                         <div className="ems-time-input-field">
@@ -264,8 +273,11 @@ export function RouteLegCard({
                                 value={projectRestMins}
                                 onChange={(e) => handleTextChange('rest_minutes', parseInt(e.target.value, 10) || 0)}
                             />
-                            <span className="ems-unit">mins ({formatHoursMins(projectRestMins)})</span>
+                            <span className="ems-unit">mins</span>
                         </div>
+                        {projectRestMins > 0 && (
+                            <span className="ems-time-formatted">({formatHoursMins(projectRestMins)})</span>
+                        )}
                     </div>
                 </div>
 
@@ -279,7 +291,7 @@ export function RouteLegCard({
                         rows={2}
                         value={leg.activity_notes || ''}
                         onChange={(e) => handleTextChange('activity_notes', e.target.value)}
-                        placeholder="Describe expedition project / aim activity (e.g. Flora/fauna survey, photo record, water testing)..."
+                        placeholder="Expedition project or aim activity (e.g. survey, photo record, water testing)..."
                     />
                 </div>
             </div>

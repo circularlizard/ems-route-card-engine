@@ -40,12 +40,14 @@ class Admin_Studio_Controller {
                 true
             );
 
-            $osApiKey = defined( 'EMS_OS_MAPS_API_KEY' ) ? constant( 'EMS_OS_MAPS_API_KEY' ) : get_option( 'ems_os_maps_api_key', '' );
+            $osApiKey    = defined( 'EMS_OS_MAPS_API_KEY' ) ? constant( 'EMS_OS_MAPS_API_KEY' ) : get_option( 'ems_os_maps_api_key', '' );
+            $osApiSecret = defined( 'EMS_OS_MAPS_API_SECRET' ) ? constant( 'EMS_OS_MAPS_API_SECRET' ) : get_option( 'ems_os_maps_api_secret', '' );
 
             wp_localize_script( 'ems-route-card-studio', 'emsRouteCardStudioConfig', [
-                'root_url'        => esc_url_raw( rest_url( 'ems-route/v1' ) ),
-                'nonce'           => wp_create_nonce( 'wp_rest' ),
-                'os_maps_api_key' => sanitize_text_field( (string) $osApiKey ),
+                'root_url'           => esc_url_raw( rest_url( 'ems-route/v1' ) ),
+                'nonce'              => wp_create_nonce( 'wp_rest' ),
+                'os_maps_api_key'    => sanitize_text_field( (string) $osApiKey ),
+                'os_maps_api_secret' => sanitize_text_field( (string) $osApiSecret ),
             ] );
         }
 

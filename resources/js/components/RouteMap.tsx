@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
+import proj4 from 'proj4';
+import proj4leaflet from 'proj4leaflet';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faLayerGroup,
@@ -9,6 +11,47 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
 
+// Ensure browser globals for proj4leaflet and link Proj namespace
+if (typeof window !== 'undefined') {
+    (window as any).L = L;
+    (window as any).proj4 = proj4;
+}
+
+// Define British National Grid projection
+proj4.defs(
+    'EPSG:27700',
+    '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs'
+);
+
+// Extended BNG resolutions from Zoom 0 (896m/px) to Zoom 12 (0.21875m/px) for deep zooming into tracks
+const BNG_RESOLUTIONS = [896.0, 448.0, 224.0, 112.0, 56.0, 28.0, 14.0, 7.0, 3.5, 1.75, 0.875, 0.4375, 0.21875];
+const BNG_ORIGIN: [number, number] = [-238375.0, 1376256.0];
+
+/**
+ * Returns the EPSG:27700 British National Grid CRS for Ordnance Survey Leisure tiles.
+ */
+function getBngCrs(): L.CRS {
+    const CrsConstructor: any =
+        (proj4leaflet as any)?.CRS ||
+        (proj4leaflet as any)?.default?.CRS ||
+        (L as any)?.Proj?.CRS ||
+        (typeof window !== 'undefined' && (window as any).L?.Proj?.CRS);
+
+    if (CrsConstructor) {
+        return new CrsConstructor(
+            'EPSG:27700',
+            '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs',
+            {
+                resolutions: BNG_RESOLUTIONS,
+                origin: BNG_ORIGIN,
+            }
+        );
+    }
+
+    console.error('Proj4Leaflet CRS constructor not found, falling back to EPSG:3857');
+    return L.CRS.EPSG3857;
+}
+
 interface RouteMapProps {
     vertices: RouteVertex[];
     legs: RouteLeg[];
@@ -17,6 +60,7 @@ interface RouteMapProps {
     onRequestSplitAtVertex?: (vertexIndex: number) => void;
     osMapsApiKey?: string;
     hoveredVertexIndex?: number | null;
+    onHoverVertex?: (vertexIndex: number | null) => void;
 }
 
 export function RouteMap({
@@ -27,6 +71,7 @@ export function RouteMap({
     onRequestSplitAtVertex,
     osMapsApiKey,
     hoveredVertexIndex,
+    onHoverVertex,
 }: RouteMapProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -34,34 +79,69 @@ export function RouteMap({
     const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
     const loadedRouteSigRef = useRef<string>('');
     const prevActiveLegIndexRef = useRef<number | null>(null);
+    const [mapReady, setMapReady] = useState(0);
 
     const [baseLayer, setBaseLayer] = useState<'opentopo' | 'cyclosm' | 'esri' | 'osm' | 'os'>('opentopo');
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // Initialize Leaflet Map
-    useEffect(() => {
-        if (!mapContainerRef.current || mapInstanceRef.current) return;
+    const isBng = baseLayer === 'os' && Boolean(osMapsApiKey);
 
-        // Default center: UK center
+    // Initialize Leaflet Map whenever the projection (isBng) changes or mounts
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
+
+        // Determine CRS and zoom constraints
+        const crs = isBng ? getBngCrs() : L.CRS.EPSG3857;
+        const minZoom = isBng ? 0 : 2;
+        const maxZoom = isBng ? 12 : 19;
+        const zoomSnap = isBng ? 0.5 : 0.25;
+
+        // Default initial center & zoom
+        let center: L.LatLngExpression = [54.5, -3.2];
+        let zoom = isBng ? 7 : 7;
+
+        if (vertices.length > 0) {
+            center = [vertices[0].lat, vertices[0].lon];
+        }
+
         const map = L.map(mapContainerRef.current, {
-            center: [56.4907, -4.2026],
-            zoom: 7,
+            center,
+            zoom,
+            crs,
+            minZoom,
+            maxZoom,
             zoomControl: false,
-            zoomSnap: 0.25,
+            zoomSnap,
             zoomDelta: 0.5,
         });
 
         // Add custom zoom control top-right
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        mapInstanceRef.current = map;
         routeLayerGroupRef.current = L.layerGroup().addTo(map);
+        mapInstanceRef.current = map;
+        setMapReady((c) => c + 1);
+
+        // If route has vertices, fit route to view
+        if (vertices.length >= 2) {
+            const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
+            map.fitBounds(allCoords, {
+                padding: [15, 15],
+                maxZoom: isBng ? 9 : 16,
+            });
+        }
 
         return () => {
-            map.remove();
+            try {
+                map.remove();
+            } catch {
+                // Ignore teardown errors
+            }
             mapInstanceRef.current = null;
+            routeLayerGroupRef.current = null;
+            hoverMarkerRef.current = null;
         };
-    }, []);
+    }, [isBng]);
 
     // Switch Base Map Tile Layer
     useEffect(() => {
@@ -76,40 +156,47 @@ export function RouteMap({
         });
 
         let tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+        let minZoom = 0;
         let maxZoom = 17;
         let attribution = '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (&copy; <a href="https://openstreetmap.org">OSM</a>)';
         let subdomains: string | string[] = ['a', 'b', 'c'];
 
         if (baseLayer === 'os' && osMapsApiKey) {
-            tileUrl = `https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png?key=${osMapsApiKey}`;
-            maxZoom = 18;
+            tileUrl = `https://api.os.uk/maps/raster/v1/zxy/Leisure_27700/{z}/{x}/{y}.png?key=${osMapsApiKey}`;
+            minZoom = 0;
+            maxZoom = 12;
             attribution = 'Contains OS data &copy; Crown copyright and database right';
             subdomains = [];
         } else if (baseLayer === 'cyclosm') {
             tileUrl = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+            minZoom = 0;
             maxZoom = 20;
             attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Tiles courtesy of <a href="https://www.cyclosm.org">CyclOSM</a>';
             subdomains = ['a', 'b', 'c'];
         } else if (baseLayer === 'esri') {
             tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+            minZoom = 0;
             maxZoom = 19;
             attribution = 'Tiles &copy; Esri &mdash; Esri, DeLorme, USGS, NPS, Ordnance Survey';
             subdomains = [];
         } else if (baseLayer === 'osm') {
             tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+            minZoom = 0;
             maxZoom = 19;
             attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
             subdomains = [];
         }
 
         const tileLayer = L.tileLayer(tileUrl, {
+            minZoom,
+            maxNativeZoom: baseLayer === 'os' ? 9 : undefined,
             maxZoom,
             attribution,
             subdomains,
         });
 
         tileLayer.addTo(map);
-    }, [baseLayer, osMapsApiKey]);
+    }, [mapReady, baseLayer, osMapsApiKey]);
 
     // Redraw Polylines & Markers when legs or vertices change
     useEffect(() => {
@@ -134,10 +221,31 @@ export function RouteMap({
 
             // Inactive polyline
             if (!isActive) {
+                // Wide transparent buffer line (22px) so users can easily click near the leg to select it
+                const hitBuffer = L.polyline(legPts, {
+                    weight: 22,
+                    opacity: 0.001,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                });
+                hitBuffer.on('click', () => onSelectLeg(idx));
+                group.addLayer(hitBuffer);
+
+                // High-contrast white casing underlay so dashes pop vividly over grey contour and terrain shading
+                const casingLine = L.polyline(legPts, {
+                    color: '#ffffff',
+                    weight: 6,
+                    opacity: 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    interactive: false,
+                });
+                group.addLayer(casingLine);
+
                 const inactiveLine = L.polyline(legPts, {
-                    color: '#64748b',
+                    color: '#7c3aed',
                     weight: 4,
-                    opacity: 0.7,
+                    opacity: 1.0,
                     dashArray: '6, 6',
                 });
 
@@ -157,11 +265,12 @@ export function RouteMap({
             }
 
             if (activePts.length >= 2) {
-                // Glow outer line
+                // Glow outer line (non-interactive so it doesn't intercept clicks)
                 const glowLine = L.polyline(activePts, {
                     color: '#60a5fa',
                     weight: 8,
                     opacity: 0.5,
+                    interactive: false,
                 });
                 group.addLayer(glowLine);
 
@@ -171,6 +280,29 @@ export function RouteMap({
                     weight: 5,
                     opacity: 1.0,
                 });
+
+                // Hover mousemove along active line to report hover vertex
+                if (onHoverVertex) {
+                    activeLine.on('mousemove', (e) => {
+                        const clickLatLng = e.latlng;
+                        let closestIdx = activeLeg.start_vertex_index;
+                        let minD = Infinity;
+
+                        for (let v = activeLeg.start_vertex_index; v <= activeLeg.end_vertex_index; v++) {
+                            if (!vertices[v]) continue;
+                            const d = clickLatLng.distanceTo([vertices[v].lat, vertices[v].lon]);
+                            if (d < minD) {
+                                minD = d;
+                                closestIdx = v;
+                            }
+                        }
+                        onHoverVertex(closestIdx);
+                    });
+
+                    activeLine.on('mouseout', () => {
+                        onHoverVertex(null);
+                    });
+                }
 
                 // Click on line to trigger split
                 if (onRequestSplitAtVertex) {
@@ -240,7 +372,7 @@ export function RouteMap({
                 }
             }
         });
-    }, [vertices, legs, activeLegIndex, onRequestSplitAtVertex, onSelectLeg]);
+    }, [mapReady, vertices, legs, activeLegIndex, onRequestSplitAtVertex, onSelectLeg, onHoverVertex]);
 
     // Fit entire route bounds on new route import or day switch
     useEffect(() => {
@@ -265,10 +397,10 @@ export function RouteMap({
             const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
             map.fitBounds(allCoords, {
                 padding: [15, 15],
-                maxZoom: 16,
+                maxZoom: isBng ? 9 : 16,
             });
         }
-    }, [vertices, activeLegIndex]);
+    }, [mapReady, vertices, activeLegIndex, isBng]);
 
     // Pan / Zoom smoothly when active leg changes via user selection
     useEffect(() => {
@@ -288,14 +420,14 @@ export function RouteMap({
             if (legCoords.length >= 2) {
                 map.fitBounds(legCoords, {
                     padding: [45, 45],
-                    maxZoom: 15,
+                    maxZoom: isBng ? 10 : 15,
                     animate: true,
                     duration: 0.5,
                 });
             }
         }
         prevActiveLegIndexRef.current = activeLegIndex;
-    }, [activeLegIndex, legs, vertices]);
+    }, [mapReady, activeLegIndex, legs, vertices, isBng]);
 
     // Update hover crosshair cursor along the route
     useEffect(() => {
@@ -319,14 +451,15 @@ export function RouteMap({
             map.removeLayer(hoverMarkerRef.current);
             hoverMarkerRef.current = null;
         }
-    }, [hoveredVertexIndex, vertices]);
+    }, [mapReady, hoveredVertexIndex, vertices]);
 
     const fitEntireRoute = () => {
-        if (!mapInstanceRef.current || vertices.length < 2) return;
+        const map = mapInstanceRef.current;
+        if (!map || vertices.length < 2) return;
         const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
-        mapInstanceRef.current.fitBounds(allCoords, {
+        map.fitBounds(allCoords, {
             padding: [15, 15],
-            maxZoom: 16,
+            maxZoom: isBng ? 10 : 16,
             animate: true,
             duration: 0.5,
         });
@@ -375,7 +508,7 @@ export function RouteMap({
                             type="button"
                             className={`ems-map-btn ${baseLayer === 'os' ? 'ems-map-btn--active' : ''}`}
                             onClick={() => setBaseLayer('os')}
-                            title="Official Ordnance Survey 1:25k/1:50k"
+                            title="Official Ordnance Survey 1:25k Explorer / 1:50k Landranger"
                         >
                             OS Leisure
                         </button>
@@ -408,7 +541,11 @@ export function RouteMap({
             </div>
 
             {/* Map Div */}
-            <div ref={mapContainerRef} className="ems-route-map-canvas" />
+            <div
+                key={isBng ? 'bng-map' : 'mercator-map'}
+                ref={mapContainerRef}
+                className="ems-route-map-canvas"
+            />
         </div>
     );
 }

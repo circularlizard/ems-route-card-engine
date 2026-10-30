@@ -5,6 +5,7 @@ interface RouteElevationProfileProps {
     vertices: RouteVertex[];
     legs: RouteLeg[];
     activeLegIndex: number;
+    hoveredVertexIndex?: number | null;
     onSelectLeg: (legIndex: number) => void;
     onHoverVertex?: (vertexIndex: number | null) => void;
 }
@@ -13,6 +14,7 @@ export function RouteElevationProfile({
     vertices,
     legs,
     activeLegIndex,
+    hoveredVertexIndex,
     onSelectLeg,
     onHoverVertex,
 }: RouteElevationProfileProps) {
@@ -92,9 +94,13 @@ export function RouteElevationProfile({
     const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
         if (!svgRef.current || !onHoverVertex) return;
         const rect = svgRef.current.getBoundingClientRect();
-        const clientX = e.clientX - rect.left;
-        const ratio = (clientX - paddingLeft) / plotWidth;
-        const targetDistM = Math.max(0, Math.min(1.0, ratio)) * totalDistM;
+        const rectWidth = rect.width > 0 ? rect.width : width;
+
+        // Scale clientX from screen pixels to SVG coordinate space
+        const scaleX = width / rectWidth;
+        const svgX = (e.clientX - rect.left) * scaleX;
+        const ratio = Math.max(0, Math.min(1.0, (svgX - paddingLeft) / plotWidth));
+        const targetDistM = ratio * totalDistM;
 
         let closestIdx = 0;
         let minDiff = Infinity;
@@ -331,6 +337,65 @@ export function RouteElevationProfile({
                             >
                                 F
                             </text>
+                        </g>
+                    );
+                })()}
+
+                {/* Scrubbing Hover Crosshair & Red Dot matching map marker */}
+                {hoveredVertexIndex !== null && hoveredVertexIndex !== undefined && vertices[hoveredVertexIndex] && (() => {
+                    const hVertex = vertices[hoveredVertexIndex];
+                    const hx = getX(hVertex.dist_from_start_m);
+                    const hy = getY(hVertex.ele_dem);
+
+                    return (
+                        <g key="elevation-hover-point" pointerEvents="none">
+                            {/* Vertical tracker dashed guideline */}
+                            <line
+                                x1={hx}
+                                y1={paddingTop}
+                                x2={hx}
+                                y2={height - paddingBottom}
+                                stroke="#ef4444"
+                                strokeWidth="1.5"
+                                strokeDasharray="3,3"
+                                opacity="0.8"
+                            />
+
+                            {/* Red dot matching the map hover marker */}
+                            <circle
+                                cx={hx}
+                                cy={hy}
+                                r={7}
+                                fill="#ef4444"
+                                fillOpacity={0.9}
+                                stroke="#ffffff"
+                                strokeWidth="2"
+                            />
+
+                            {/* Tooltip badge with Elevation and Distance */}
+                            <g
+                                transform={`translate(${Math.max(paddingLeft + 42, Math.min(width - paddingRight - 42, hx))}, ${hy > paddingTop + 24 ? hy - 14 : hy + 22})`}
+                            >
+                                <rect
+                                    x="-38"
+                                    y="-12"
+                                    width="76"
+                                    height="18"
+                                    rx="3"
+                                    fill="#1e293b"
+                                    fillOpacity="0.9"
+                                />
+                                <text
+                                    x="0"
+                                    y="1"
+                                    textAnchor="middle"
+                                    fontSize="10"
+                                    fontWeight="600"
+                                    fill="#ffffff"
+                                >
+                                    {Math.round(hVertex.ele_dem)}m &bull; {(hVertex.dist_from_start_m / 1000).toFixed(1)}km
+                                </text>
+                            </g>
                         </g>
                     );
                 })()}

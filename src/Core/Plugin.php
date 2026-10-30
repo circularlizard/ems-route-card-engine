@@ -30,6 +30,9 @@ class Plugin {
 
         $routeCardController = new \EMSRoute\Core\REST\Route_Card_Controller();
         $routeCardController->register_routes();
+
+        $settingsController = new \EMSRoute\Core\REST\Settings_Controller();
+        $settingsController->register_routes();
     }
 
     /**

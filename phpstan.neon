@@ -4,7 +4,7 @@ includes:
 parameters:
     level: 5
     parallel:
-        maximumNumberOfProcesses: 1
+        maximumNumberOfProcesses: 0
     paths:
         - src
     excludePaths:

@@ -65,6 +65,7 @@ describe('RouteCardStudio', () => {
         expect(screen.getByText(/DofE Route Card Studio & Terrain Engine/i)).toBeInTheDocument();
         expect(screen.getByText(/Route Card Studio & Sandbox/i)).toBeInTheDocument();
         expect(screen.getByText(/Local DEM Tile Manager/i)).toBeInTheDocument();
+        expect(screen.getByText(/Map & API Settings/i)).toBeInTheDocument();
 
         // Check RouteCardBuilder elements
         expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
@@ -91,5 +92,20 @@ describe('RouteCardStudio', () => {
         fireEvent.click(sandboxTab);
 
         expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
+    });
+
+    it('switches to Map & API Settings tab when clicked', async () => {
+        render(<RouteCardStudio />);
+
+        const settingsTab = screen.getByText(/Map & API Settings/i);
+        fireEvent.click(settingsTab);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Map & API Credentials/i)).toBeInTheDocument();
+        });
+
+        expect(screen.getByLabelText(/OS Maps API Key/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Test Connection/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Save Settings/i })).toBeInTheDocument();
     });
 });

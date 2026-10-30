@@ -5,7 +5,6 @@ import {
     faFloppyDisk,
     faTable,
     faMapLocationDot,
-    faPlus,
     faTrashCan,
     faFilePdf,
     faCircleNotch,
@@ -304,6 +303,23 @@ export function RouteCardBuilder({
     const handleUpdateLeg = (legIdx: number, updatedLeg: RouteLeg) => {
         const newLegs = [...legs];
         newLegs[legIdx] = updatedLeg;
+
+        // If start_name changed on this leg, sync the previous leg's end_name
+        if (legIdx > 0 && updatedLeg.start_name !== legs[legIdx]?.start_name) {
+            newLegs[legIdx - 1] = {
+                ...newLegs[legIdx - 1],
+                end_name: updatedLeg.start_name,
+            };
+        }
+
+        // If end_name changed on this leg, sync the next leg's start_name
+        if (legIdx < newLegs.length - 1 && updatedLeg.end_name !== legs[legIdx]?.end_name) {
+            newLegs[legIdx + 1] = {
+                ...newLegs[legIdx + 1],
+                start_name: updatedLeg.end_name,
+            };
+        }
+
         updateActiveDay({ legs: newLegs });
     };
 
@@ -410,61 +426,110 @@ export function RouteCardBuilder({
                 </div>
             )}
 
-            {/* Top Toolbar */}
-            <div className="ems-builder-toolbar">
-                <div className="ems-builder-title-group">
-                    <label htmlFor={routeTitleId} className="screen-reader-text">Route Title</label>
-                    <input
-                        id={routeTitleId}
-                        type="text"
-                        className="ems-route-title-input"
-                        value={routeTitle}
-                        onChange={(e) => updateActiveDay({ routeTitle: e.target.value })}
-                        placeholder="Route Title"
-                    />
-                    <span className={`ems-badge-status ems-badge-status--${cardStatus}`}>
-                        {cardStatus.toUpperCase()}
-                    </span>
-                </div>
+            {/* Sticky Header: Route Header & Actions + Compact Info Bar with View Control */}
+            <div className="ems-builder-sticky-header">
+                {/* Top Toolbar */}
+                <div className="ems-builder-toolbar">
+                    <div className="ems-builder-title-group">
+                        <label htmlFor={routeTitleId} className="screen-reader-text">Route Title</label>
+                        <input
+                            id={routeTitleId}
+                            type="text"
+                            className="ems-route-title-input"
+                            value={routeTitle}
+                            onChange={(e) => updateActiveDay({ routeTitle: e.target.value })}
+                            placeholder="Route Title"
+                        />
+                        <span className={`ems-badge-status ems-badge-status--${cardStatus}`}>
+                            {cardStatus.toUpperCase()}
+                        </span>
+                    </div>
 
-                <div className="ems-builder-actions">
-                    {undoStack.length > 0 && (
-                        <button type="button" className="ems-btn ems-btn--subtle" onClick={handleUndo} title="Undo leg split/merge">
-                            <FontAwesomeIcon icon={faRotateLeft} /> Undo
-                        </button>
-                    )}
+                    <div className="ems-builder-actions">
+                        {undoStack.length > 0 && (
+                            <button type="button" className="ems-btn ems-btn--subtle" onClick={handleUndo} title="Undo leg split/merge">
+                                <FontAwesomeIcon icon={faRotateLeft} /> Undo
+                            </button>
+                        )}
 
-                    {legs.length > 0 && (
+                        {legs.length > 0 && (
+                            <button
+                                type="button"
+                                className="ems-btn ems-btn--subtle"
+                                onClick={handleClearDayRoute}
+                                title="Clear this day's route"
+                            >
+                                <FontAwesomeIcon icon={faTrashCan} /> Clear Day
+                            </button>
+                        )}
+
                         <button
                             type="button"
-                            className="ems-btn ems-btn--subtle"
-                            onClick={handleClearDayRoute}
-                            title="Clear this day's route"
+                            className="ems-btn ems-btn--secondary"
+                            onClick={handleSaveDraft}
+                            disabled={isSaving || legs.length === 0}
                         >
-                            <FontAwesomeIcon icon={faTrashCan} /> Clear Day
+                            <FontAwesomeIcon icon={isSaving ? faCircleNotch : faFloppyDisk} spin={isSaving} />
+                            Save Draft
                         </button>
-                    )}
 
-                    <button
-                        type="button"
-                        className="ems-btn ems-btn--secondary"
-                        onClick={handleSaveDraft}
-                        disabled={isSaving || legs.length === 0}
-                    >
-                        <FontAwesomeIcon icon={isSaving ? faCircleNotch : faFloppyDisk} spin={isSaving} />
-                        Save Draft
-                    </button>
-
-                    <button
-                        type="button"
-                        className="ems-btn ems-btn--primary"
-                        onClick={() => onExportPdf?.(cardId)}
-                        disabled={legs.length === 0}
-                    >
-                        <FontAwesomeIcon icon={faFilePdf} />
-                        Export PDF
-                    </button>
+                        <button
+                            type="button"
+                            className="ems-btn ems-btn--primary"
+                            onClick={() => onExportPdf?.(cardId)}
+                            disabled={legs.length === 0}
+                        >
+                            <FontAwesomeIcon icon={faFilePdf} />
+                            Export PDF
+                        </button>
+                    </div>
                 </div>
+
+                {/* Route Stats Summary Bar */}
+                {legs.length > 0 && (
+                    <div className="ems-route-stats-bar ems-route-stats-bar--compact">
+                        <div className="ems-stat-pill">
+                            <span className="ems-stat-pill__label">Distance</span>
+                            <span className="ems-stat-pill__val">{totalDistanceKm} km</span>
+                        </div>
+                        <div className="ems-stat-pill">
+                            <span className="ems-stat-pill__label">Climb</span>
+                            <span className="ems-stat-pill__val">+{totalAscentM} m</span>
+                        </div>
+                        <div className="ems-stat-pill">
+                            <span className="ems-stat-pill__label">Walking</span>
+                            <span className="ems-stat-pill__val">{formatHoursMins(totalWalkingMins)}</span>
+                        </div>
+                        <div className="ems-stat-pill">
+                            <span className="ems-stat-pill__label">Project &amp; Rest</span>
+                            <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
+                        </div>
+                        <div className="ems-stat-pill ems-stat-pill--highlight">
+                            <span className="ems-stat-pill__label">Total Expedition</span>
+                            <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
+                        </div>
+
+                        {/* View Switcher */}
+                        <div className="ems-view-toggle">
+                            <button
+                                type="button"
+                                className={`ems-view-btn ${viewMode === 'split' ? 'ems-view-btn--active' : ''}`}
+                                onClick={() => setViewMode('split')}
+                                title="Interactive Map & Journey Cards"
+                            >
+                                <FontAwesomeIcon icon={faMapLocationDot} /> Map View
+                            </button>
+                            <button
+                                type="button"
+                                className={`ems-view-btn ${viewMode === 'table' ? 'ems-view-btn--active' : ''}`}
+                                onClick={() => setViewMode('table')}
+                                title="Full 12-Column DofE Table View"
+                            >
+                                <FontAwesomeIcon icon={faTable} /> Table
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Empty State Dropzone for Current Day */}
@@ -499,52 +564,6 @@ export function RouteCardBuilder({
                 </div>
             )}
 
-            {/* Route Stats Summary Bar */}
-            {legs.length > 0 && (
-                <div className="ems-route-stats-bar">
-                    <div className="ems-stat-pill">
-                        <span className="ems-stat-pill__label">Distance</span>
-                        <span className="ems-stat-pill__val">{totalDistanceKm} km</span>
-                    </div>
-                    <div className="ems-stat-pill">
-                        <span className="ems-stat-pill__label">Climb</span>
-                        <span className="ems-stat-pill__val">+{totalAscentM} m</span>
-                    </div>
-                    <div className="ems-stat-pill">
-                        <span className="ems-stat-pill__label">Walking</span>
-                        <span className="ems-stat-pill__val">{formatHoursMins(totalWalkingMins)}</span>
-                    </div>
-                    <div className="ems-stat-pill">
-                        <span className="ems-stat-pill__label">Project & Rest</span>
-                        <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
-                    </div>
-                    <div className="ems-stat-pill ems-stat-pill--highlight">
-                        <span className="ems-stat-pill__label">Total Expedition</span>
-                        <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
-                    </div>
-
-                    {/* View Switcher */}
-                    <div className="ems-view-toggle">
-                        <button
-                            type="button"
-                            className={`ems-view-btn ${viewMode === 'split' ? 'ems-view-btn--active' : ''}`}
-                            onClick={() => setViewMode('split')}
-                            title="Interactive Map & Journey Cards"
-                        >
-                            <FontAwesomeIcon icon={faMapLocationDot} /> Split
-                        </button>
-                        <button
-                            type="button"
-                            className={`ems-view-btn ${viewMode === 'table' ? 'ems-view-btn--active' : ''}`}
-                            onClick={() => setViewMode('table')}
-                            title="Full 12-Column DofE Table View"
-                        >
-                            <FontAwesomeIcon icon={faTable} /> Table
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* Pre-Flight Coaching Checks */}
             {legs.length > 0 && (
                 <RouteCoachingBanner
@@ -567,12 +586,14 @@ export function RouteCardBuilder({
                             onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
                             osMapsApiKey={osMapsApiKey}
                             hoveredVertexIndex={hoveredVertexIndex}
+                            onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
                         />
 
                         <RouteElevationProfile
                             vertices={vertices}
                             legs={legs}
                             activeLegIndex={activeLegIndex}
+                            hoveredVertexIndex={hoveredVertexIndex}
                             onSelectLeg={(idx) => setActiveLegIndex(idx)}
                             onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
                         />
@@ -582,13 +603,6 @@ export function RouteCardBuilder({
                     <div ref={legCardsContainerRef} className="ems-studio-pane ems-studio-pane--cards">
                         <div className="ems-cards-deck-header">
                             <h3>Journey Legs ({legs.length})</h3>
-                            <button
-                                type="button"
-                                className="ems-btn-xs"
-                                onClick={() => handleSplitLeg(legs.length - 1)}
-                            >
-                                <FontAwesomeIcon icon={faPlus} /> Add Split Point
-                            </button>
                         </div>
 
                         <div className="ems-leg-cards-list">
@@ -599,6 +613,7 @@ export function RouteCardBuilder({
                                     vertices={vertices}
                                     isActive={idx === activeLegIndex}
                                     isLastLeg={idx === legs.length - 1}
+                                    nextLegStartName={legs[idx + 1]?.start_name}
                                     onSelect={() => setActiveLegIndex(idx)}
                                     onUpdateLeg={(updated) => handleUpdateLeg(idx, updated)}
                                     onSplitLeg={() => handleSplitLeg(idx)}
