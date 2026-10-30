@@ -96,11 +96,16 @@ describe('route-calculations utilities', () => {
             'Start Bothy',
             'Summit Cairn',
             'Initial description',
-            'Escape SW'
+            'Escape SW',
+            'Take summit photos',
+            15,
+            30
         );
 
         expect(initialLeg.distance_km).toBe(2.0);
         expect(initialLeg.ascent_m).toBe(150);
+        expect(initialLeg.rest_minutes).toBe(15);
+        expect(initialLeg.activity_minutes).toBe(30);
 
         // Split at vertex 1
         const splitLegs = splitLegAtVertex(dummyVertices, [initialLeg], 0, 1, 'Col Checkpoint');
@@ -113,12 +118,15 @@ describe('route-calculations utilities', () => {
         expect(splitLegs[0].distance_km).toBe(1.0);
         expect(splitLegs[0].ascent_m).toBe(100);
 
-        // Leg 2
+        // Leg 2 preserves rest and project activity at destination
         expect(splitLegs[1].leg_number).toBe(2);
         expect(splitLegs[1].start_name).toBe('Col Checkpoint');
         expect(splitLegs[1].end_name).toBe('Summit Cairn');
         expect(splitLegs[1].distance_km).toBe(1.0);
         expect(splitLegs[1].ascent_m).toBe(50);
+        expect(splitLegs[1].rest_minutes).toBe(15);
+        expect(splitLegs[1].activity_minutes).toBe(30);
+        expect(splitLegs[1].activity_notes).toBe('Take summit photos');
     });
 
     it('merges two adjacent legs correctly', () => {
@@ -164,8 +172,8 @@ describe('route-calculations utilities', () => {
             },
         ];
 
-        const leg1 = buildLegFromVertices(dummyVertices, 0, 1, 1, 'Start', 'Middle', 'First part');
-        const leg2 = buildLegFromVertices(dummyVertices, 1, 2, 2, 'Middle', 'Finish', 'Second part');
+        const leg1 = buildLegFromVertices(dummyVertices, 0, 1, 1, 'Start', 'Middle', 'First part', '', '', 10, 20);
+        const leg2 = buildLegFromVertices(dummyVertices, 1, 2, 2, 'Middle', 'Finish', 'Second part', '', 'Survey stream', 15, 30);
 
         const merged = mergeLegsWithNext(dummyVertices, [leg1, leg2], 0);
         expect(merged.length).toBe(1);
@@ -174,6 +182,9 @@ describe('route-calculations utilities', () => {
         expect(merged[0].distance_km).toBe(2.0);
         expect(merged[0].ascent_m).toBe(150);
         expect(merged[0].route_description).toBe('First part; Second part');
+        expect(merged[0].rest_minutes).toBe(25);
+        expect(merged[0].activity_minutes).toBe(50);
+        expect(merged[0].activity_notes).toBe('Survey stream');
     });
 
     it('reconciles re-imported routes and preserves written descriptions', () => {

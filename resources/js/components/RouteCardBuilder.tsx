@@ -371,7 +371,8 @@ export function RouteCardBuilder({
     const totalAscentM = Math.round(legs.reduce((acc, l) => acc + l.ascent_m, 0));
     const totalWalkingMins = legs.reduce((acc, l) => acc + l.walking_minutes, 0);
     const totalRestMins = legs.reduce((acc, l) => acc + (l.rest_minutes || 0), 0);
-    const totalExpeditionMins = totalWalkingMins + totalRestMins;
+    const totalProjectMins = legs.reduce((acc, l) => acc + (l.activity_minutes || (l as any).project_minutes || 0), 0);
+    const totalExpeditionMins = totalWalkingMins + totalRestMins + totalProjectMins;
 
     return (
         <div className="ems-builder-container">
@@ -518,6 +519,10 @@ export function RouteCardBuilder({
                         <span className="ems-stat-pill__label">Planned Rest</span>
                         <span className="ems-stat-pill__val">{formatHoursMins(totalRestMins)}</span>
                     </div>
+                    <div className="ems-stat-pill">
+                        <span className="ems-stat-pill__label">Project Time</span>
+                        <span className="ems-stat-pill__val">{formatHoursMins(totalProjectMins)}</span>
+                    </div>
                     <div className="ems-stat-pill ems-stat-pill--highlight">
                         <span className="ems-stat-pill__label">Total Expedition</span>
                         <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
@@ -551,6 +556,7 @@ export function RouteCardBuilder({
                     legs={legs}
                     totalWalkingMinutes={totalWalkingMins}
                     totalRestMinutes={totalRestMins}
+                    totalProjectMinutes={totalProjectMins}
                 />
             )}
 

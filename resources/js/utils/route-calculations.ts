@@ -103,7 +103,8 @@ export function buildLegFromVertices(
     existingDesc: string = '',
     existingEscape: string = '',
     existingActivity: string = '',
-    existingRest: number = 0
+    existingRest: number = 0,
+    existingActivityMinutes: number = 0
 ): RouteLeg {
     const vStart = vertices[startIdx];
     const vEnd = vertices[endIdx];
@@ -140,6 +141,7 @@ export function buildLegFromVertices(
         escape_route: existingEscape,
         activity_notes: existingActivity,
         rest_minutes: existingRest,
+        activity_minutes: existingActivityMinutes,
     };
 }
 
@@ -172,6 +174,7 @@ export function splitLegAtVertex(
         legToSplit.route_description,
         legToSplit.escape_route,
         '',
+        0,
         0
     );
 
@@ -185,7 +188,8 @@ export function splitLegAtVertex(
         '',
         legToSplit.escape_route,
         legToSplit.activity_notes,
-        legToSplit.rest_minutes
+        legToSplit.rest_minutes,
+        legToSplit.activity_minutes || 0
     );
 
     const newLegs = [
@@ -220,6 +224,7 @@ export function mergeLegsWithNext(
     const mergedDesc = [legA.route_description, legB.route_description].filter(Boolean).join('; ');
     const mergedEscape = legA.escape_route || legB.escape_route || '';
     const mergedRest = (legA.rest_minutes || 0) + (legB.rest_minutes || 0);
+    const mergedActivity = (legA.activity_minutes || 0) + (legB.activity_minutes || 0);
 
     const merged = buildLegFromVertices(
         vertices,
@@ -231,7 +236,8 @@ export function mergeLegsWithNext(
         mergedDesc,
         mergedEscape,
         legB.activity_notes || legA.activity_notes,
-        mergedRest
+        mergedRest,
+        mergedActivity
     );
 
     const newLegs = [
@@ -304,6 +310,7 @@ export function reconcileReimport(
                 escape_route: oldLeg.escape_route,
                 activity_notes: oldLeg.activity_notes,
                 rest_minutes: oldLeg.rest_minutes,
+                activity_minutes: oldLeg.activity_minutes || 0,
             };
         }
 
@@ -318,7 +325,10 @@ export function reconcileReimport(
             new_metrics: { distance_km: newLeg.distance_km, ascent_m: newLeg.ascent_m },
         });
 
-        return newLeg;
+        return {
+            ...newLeg,
+            activity_minutes: 0,
+        };
     });
 
     // Detect removed legs from the old route

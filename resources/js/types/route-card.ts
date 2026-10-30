@@ -39,6 +39,7 @@ export interface RouteLeg {
     escape_route: string;
     activity_notes?: string;
     rest_minutes?: number;
+    activity_minutes?: number;
 }
 
 export interface EnrichedRouteData {

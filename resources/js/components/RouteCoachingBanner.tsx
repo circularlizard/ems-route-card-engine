@@ -16,6 +16,7 @@ interface RouteCoachingBannerProps {
     legs: RouteLeg[];
     totalWalkingMinutes: number;
     totalRestMinutes: number;
+    totalProjectMinutes?: number;
     dofeLevel?: 'bronze' | 'silver' | 'gold';
 }
 
@@ -23,6 +24,7 @@ export function RouteCoachingBanner({
     legs,
     totalWalkingMinutes,
     totalRestMinutes,
+    totalProjectMinutes = 0,
     dofeLevel = 'silver',
 }: RouteCoachingBannerProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -30,7 +32,7 @@ export function RouteCoachingBanner({
     const issues: { type: 'warning' | 'info'; message: string; icon: typeof faTriangleExclamation }[] = [];
 
     // 1. Minimum DofE Expedition Hours
-    const totalExpMins = totalWalkingMinutes + totalRestMinutes;
+    const totalExpMins = totalWalkingMinutes + totalRestMinutes + totalProjectMinutes;
     const totalExpHours = totalExpMins / 60.0;
     const minHours = dofeLevel === 'bronze' ? 6 : dofeLevel === 'silver' ? 7 : 8;
 

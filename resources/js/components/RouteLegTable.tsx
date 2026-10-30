@@ -37,16 +37,17 @@ export function RouteLegTable({
             <table className="ems-route-table">
                 <thead>
                     <tr>
-                        <th style={{ width: '45px' }}>Leg</th>
+                        <th style={{ width: '40px' }}>#</th>
                         <th>From (Origin)</th>
                         <th>To (Destination)</th>
                         <th style={{ width: '70px' }}>Dist (km)</th>
-                        <th style={{ width: '75px' }}>Bearing</th>
                         <th style={{ width: '70px' }}>Climb (m)</th>
                         <th style={{ width: '80px' }}>Walk Time</th>
-                        <th style={{ width: '105px' }}>Rest</th>
-                        <th style={{ width: '80px' }}>Total Time</th>
+                        <th style={{ width: '90px' }}>Rest</th>
+                        <th style={{ width: '90px' }}>Project</th>
+                        <th style={{ width: '80px' }}>Total</th>
                         <th>Navigation Description</th>
+                        <th>Project Activity</th>
                         <th>Escape Route</th>
                         <th style={{ width: '75px' }}>Actions</th>
                     </tr>
@@ -55,6 +56,9 @@ export function RouteLegTable({
                     {legs.map((leg, idx) => {
                         const isActive = idx === activeLegIndex;
                         const isLast = idx === legs.length - 1;
+                        const restMins = leg.rest_minutes || 0;
+                        const projectMins = leg.activity_minutes || (leg as any).project_minutes || 0;
+                        const totalMins = leg.walking_minutes + restMins + projectMins;
 
                         return (
                             <tr
@@ -74,26 +78,45 @@ export function RouteLegTable({
                                     <div className="ems-table-point-coord">{leg.end_grid_ref} ({leg.end_elevation_m}m)</div>
                                 </td>
                                 <td className="ems-text-center font-mono"><b>{leg.distance_km}</b></td>
-                                <td className="ems-text-center font-mono">{String(leg.magnetic_bearing).padStart(3, '0')}° mag</td>
                                 <td className="ems-text-center font-mono">+{Math.round(leg.ascent_m)}m</td>
                                 <td className="ems-text-center font-mono"><b>{formatHoursMins(leg.walking_minutes)}</b></td>
                                 <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                                         <input
                                             type="number"
                                             min="0"
-                                            max="120"
+                                            max="180"
                                             className="ems-table-input-number"
-                                            value={leg.rest_minutes || 0}
+                                            value={restMins}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => handleTextChange(idx, 'rest_minutes', parseInt(e.target.value, 10) || 0)}
+                                            title="Rest Duration (minutes)"
                                         />
-                                        <span className="font-mono" style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                                            {formatHoursMins(leg.rest_minutes || 0)}
+                                        <span className="font-mono" style={{ fontSize: '11px', color: '#64748b' }}>
+                                            m
                                         </span>
                                     </div>
                                 </td>
-                                <td className="ems-text-center font-mono"><b>{formatHoursMins(leg.walking_minutes + (leg.rest_minutes || 0))}</b></td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="240"
+                                            className="ems-table-input-number"
+                                            value={projectMins}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => handleTextChange(idx, 'activity_minutes', parseInt(e.target.value, 10) || 0)}
+                                            title="Project / Aim Duration (minutes)"
+                                        />
+                                        <span className="font-mono" style={{ fontSize: '11px', color: '#64748b' }}>
+                                            m
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="ems-text-center font-mono">
+                                    <b>{formatHoursMins(totalMins)}</b>
+                                </td>
                                 <td>
                                     <textarea
                                         rows={2}
@@ -108,18 +131,28 @@ export function RouteLegTable({
                                     <textarea
                                         rows={2}
                                         className="ems-table-textarea"
+                                        value={leg.activity_notes || ''}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => handleTextChange(idx, 'activity_notes', e.target.value)}
+                                        placeholder="Project / aim activity..."
+                                    />
+                                </td>
+                                <td>
+                                    <textarea
+                                        rows={2}
+                                        className="ems-table-textarea"
                                         value={leg.escape_route || ''}
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleTextChange(idx, 'escape_route', e.target.value)}
                                         placeholder="Escape plan..."
                                     />
                                 </td>
-                                <td>
-                                    <div className="ems-table-actions" onClick={(e) => e.stopPropagation()}>
+                                <td className="ems-text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="ems-table-actions">
                                         <button
                                             type="button"
-                                            className="ems-btn-icon"
-                                            title="Split Leg at midpoint"
+                                            className="ems-btn-xs"
+                                            title="Split leg at midpoint"
                                             onClick={() => onSplitLeg(idx)}
                                         >
                                             <FontAwesomeIcon icon={faScissors} />
@@ -127,7 +160,7 @@ export function RouteLegTable({
                                         {!isLast && (
                                             <button
                                                 type="button"
-                                                className="ems-btn-icon"
+                                                className="ems-btn-xs"
                                                 title="Merge with next leg"
                                                 onClick={() => onMergeLeg(idx)}
                                             >
