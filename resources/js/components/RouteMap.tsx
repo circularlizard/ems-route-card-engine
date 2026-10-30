@@ -47,6 +47,8 @@ export function RouteMap({
             center: [56.4907, -4.2026],
             zoom: 7,
             zoomControl: false,
+            zoomSnap: 0.25,
+            zoomDelta: 0.5,
         });
 
         // Add custom zoom control top-right
@@ -261,7 +263,10 @@ export function RouteMap({
             prevActiveLegIndexRef.current = activeLegIndex;
 
             const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
-            map.fitBounds(allCoords, { padding: [35, 35] });
+            map.fitBounds(allCoords, {
+                padding: [15, 15],
+                maxZoom: 16,
+            });
         }
     }, [vertices, activeLegIndex]);
 
@@ -319,7 +324,12 @@ export function RouteMap({
     const fitEntireRoute = () => {
         if (!mapInstanceRef.current || vertices.length < 2) return;
         const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
-        mapInstanceRef.current.fitBounds(allCoords, { padding: [30, 30] });
+        mapInstanceRef.current.fitBounds(allCoords, {
+            padding: [15, 15],
+            maxZoom: 16,
+            animate: true,
+            duration: 0.5,
+        });
     };
 
     return (

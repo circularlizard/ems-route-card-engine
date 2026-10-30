@@ -26,10 +26,14 @@ export function RouteLegTable({
     const handleTextChange = (legIndex: number, field: keyof RouteLeg, value: string | number) => {
         const leg = legs[legIndex];
         if (!leg) return;
-        onUpdateLeg(legIndex, {
+        const updated: any = {
             ...leg,
             [field]: value,
-        });
+        };
+        if (field === 'route_description') {
+            updated.description = value;
+        }
+        onUpdateLeg(legIndex, updated as RouteLeg);
     };
 
     return (

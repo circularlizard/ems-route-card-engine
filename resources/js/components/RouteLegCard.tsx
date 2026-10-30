@@ -67,7 +67,9 @@ export function RouteLegCard({
     const endEle = leg.end_elevation_m ?? vEnd?.ele_dem ?? 0;
 
     // Check description quality
-    const desc = leg.route_description || (leg as any).description || '';
+    const desc = leg.route_description !== undefined
+        ? leg.route_description
+        : ((leg as any).description ?? '');
     const wordCount = desc.trim() ? desc.trim().split(/\s+/).length : 0;
     const navKeywords = ['stream', 'burn', 'track', 'path', 'ridge', 'cairn', 'col', 'contour', 'handrail', 'wall', 'fence', 'summit'];
     const foundKeywords = navKeywords.filter((kw) => desc.toLowerCase().includes(kw));
@@ -84,7 +86,7 @@ export function RouteLegCard({
     const totalLegMins = leg.walking_minutes + projectRestMins;
 
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
-        onUpdateLeg({
+        const updatedLeg: any = {
             ...leg,
             start_name: startName,
             end_name: endName,
@@ -93,7 +95,11 @@ export function RouteLegCard({
             start_elevation_m: startEle,
             end_elevation_m: endEle,
             [field]: value,
-        });
+        };
+        if (field === 'route_description') {
+            updatedLeg.description = value;
+        }
+        onUpdateLeg(updatedLeg as RouteLeg);
     };
 
     return (
