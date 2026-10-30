@@ -3,6 +3,7 @@ import {
     calculateBearing,
     calculateNaismithTime,
     getCompassDirection,
+    formatHoursMins,
     buildLegFromVertices,
     splitLegAtVertex,
     mergeLegsWithNext,
@@ -33,6 +34,15 @@ describe('route-calculations utilities', () => {
 
         // Tunnel / flat override
         expect(calculateNaismithTime(5.0, 200, 0, true)).toBe(60);
+    });
+
+    it('formats minutes as hours and minutes correctly', () => {
+        expect(formatHoursMins(0)).toBe('0h 00m');
+        expect(formatHoursMins(9)).toBe('0h 09m');
+        expect(formatHoursMins(45)).toBe('0h 45m');
+        expect(formatHoursMins(60)).toBe('1h 00m');
+        expect(formatHoursMins(75)).toBe('1h 15m');
+        expect(formatHoursMins(130)).toBe('2h 10m');
     });
 
     it('splits a leg into two with correct recalculated metrics', () => {

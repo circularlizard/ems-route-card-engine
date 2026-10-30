@@ -10,6 +10,7 @@ import {
     faClock,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg } from '../types/route-card';
+import { formatHoursMins } from '../utils/route-calculations';
 
 interface RouteCoachingBannerProps {
     legs: RouteLeg[];
@@ -29,14 +30,15 @@ export function RouteCoachingBanner({
     const issues: { type: 'warning' | 'info'; message: string; icon: typeof faTriangleExclamation }[] = [];
 
     // 1. Minimum DofE Expedition Hours
-    const totalExpHours = (totalWalkingMinutes + totalRestMinutes) / 60.0;
+    const totalExpMins = totalWalkingMinutes + totalRestMinutes;
+    const totalExpHours = totalExpMins / 60.0;
     const minHours = dofeLevel === 'bronze' ? 6 : dofeLevel === 'silver' ? 7 : 8;
 
     if (totalExpHours < minHours) {
         issues.push({
             type: 'warning',
             icon: faClock,
-            message: `Total expedition time is ${totalExpHours.toFixed(1)} hrs. DofE ${dofeLevel.toUpperCase()} requires a minimum of ${minHours} hours planned activity per day.`,
+            message: `Total expedition time is ${formatHoursMins(totalExpMins)} (${totalExpHours.toFixed(1)} hrs). DofE ${dofeLevel.toUpperCase()} requires a minimum of ${minHours} hours planned activity per day.`,
         });
     }
 

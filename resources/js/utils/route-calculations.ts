@@ -81,6 +81,16 @@ export function calculateNaismithTime(
 }
 
 /**
+ * Formats minutes into hours and minutes (e.g. 75 -> "1h 15m", 45 -> "0h 45m").
+ */
+export function formatHoursMins(mins: number): string {
+    const totalM = Math.max(0, Math.round(mins || 0));
+    const h = Math.floor(totalM / 60);
+    const m = totalM % 60;
+    return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+/**
  * Builds a single leg between two vertex indices from the pre-enriched vertices array.
  */
 export function buildLegFromVertices(

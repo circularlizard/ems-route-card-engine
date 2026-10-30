@@ -15,7 +15,7 @@ import {
     faCoffee,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
-import { getCompassDirection } from '../utils/route-calculations';
+import { getCompassDirection, formatHoursMins } from '../utils/route-calculations';
 
 interface RouteLegCardProps {
     leg: RouteLeg;
@@ -213,7 +213,12 @@ export function RouteLegCard({
 
                 <div className="ems-metric-item" title="Naismith Walking Time">
                     <FontAwesomeIcon icon={faClock} className="ems-metric-icon" />
-                    <span><b>{leg.walking_minutes}</b> min walk</span>
+                    <span><b>{formatHoursMins(leg.walking_minutes)}</b> walk</span>
+                    {(leg.rest_minutes || 0) > 0 && (
+                        <span style={{ marginLeft: '4px', color: '#64748b', fontSize: '11px' }}>
+                            ({formatHoursMins(leg.walking_minutes + (leg.rest_minutes || 0))} total)
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -306,12 +311,12 @@ export function RouteLegCard({
                             value={leg.rest_minutes || 0}
                             onChange={(e) => handleTextChange('rest_minutes', parseInt(e.target.value, 10) || 0)}
                         />
-                        <span className="ems-unit">mins rest</span>
+                        <span className="ems-unit">({formatHoursMins(leg.rest_minutes || 0)} rest)</span>
 
                         <div className="ems-quick-rest-btns">
-                            <button type="button" onClick={() => handleTextChange('rest_minutes', 10)}>10m</button>
-                            <button type="button" onClick={() => handleTextChange('rest_minutes', 15)}>15m</button>
-                            <button type="button" onClick={() => handleTextChange('rest_minutes', 30)}>30m Lunch</button>
+                            <button type="button" onClick={() => handleTextChange('rest_minutes', 10)}>0h 10m</button>
+                            <button type="button" onClick={() => handleTextChange('rest_minutes', 15)}>0h 15m</button>
+                            <button type="button" onClick={() => handleTextChange('rest_minutes', 30)}>0h 30m Lunch</button>
                         </div>
                     </div>
                     <input

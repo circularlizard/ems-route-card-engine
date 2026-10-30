@@ -4,6 +4,7 @@ import {
     faCodeMerge,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg } from '../types/route-card';
+import { formatHoursMins } from '../utils/route-calculations';
 
 interface RouteLegTableProps {
     legs: RouteLeg[];
@@ -42,8 +43,9 @@ export function RouteLegTable({
                         <th style={{ width: '70px' }}>Dist (km)</th>
                         <th style={{ width: '75px' }}>Bearing</th>
                         <th style={{ width: '70px' }}>Climb (m)</th>
-                        <th style={{ width: '75px' }}>Walk Time</th>
-                        <th style={{ width: '65px' }}>Rest</th>
+                        <th style={{ width: '80px' }}>Walk Time</th>
+                        <th style={{ width: '105px' }}>Rest</th>
+                        <th style={{ width: '80px' }}>Total Time</th>
                         <th>Navigation Description</th>
                         <th>Escape Route</th>
                         <th style={{ width: '75px' }}>Actions</th>
@@ -74,18 +76,24 @@ export function RouteLegTable({
                                 <td className="ems-text-center font-mono"><b>{leg.distance_km}</b></td>
                                 <td className="ems-text-center font-mono">{String(leg.magnetic_bearing).padStart(3, '0')}° mag</td>
                                 <td className="ems-text-center font-mono">+{Math.round(leg.ascent_m)}m</td>
-                                <td className="ems-text-center font-mono"><b>{leg.walking_minutes}m</b></td>
+                                <td className="ems-text-center font-mono"><b>{formatHoursMins(leg.walking_minutes)}</b></td>
                                 <td>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="90"
-                                        className="ems-table-input-number"
-                                        value={leg.rest_minutes || 0}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => handleTextChange(idx, 'rest_minutes', parseInt(e.target.value, 10) || 0)}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="120"
+                                            className="ems-table-input-number"
+                                            value={leg.rest_minutes || 0}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => handleTextChange(idx, 'rest_minutes', parseInt(e.target.value, 10) || 0)}
+                                        />
+                                        <span className="font-mono" style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                            {formatHoursMins(leg.rest_minutes || 0)}
+                                        </span>
+                                    </div>
                                 </td>
+                                <td className="ems-text-center font-mono"><b>{formatHoursMins(leg.walking_minutes + (leg.rest_minutes || 0))}</b></td>
                                 <td>
                                     <textarea
                                         rows={2}

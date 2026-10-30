@@ -19,6 +19,7 @@ import {
     splitLegAtVertex,
     mergeLegsWithNext,
     reconcileReimport,
+    formatHoursMins,
 } from '../utils/route-calculations';
 import { RouteMap } from './RouteMap';
 import { RouteElevationProfile } from './RouteElevationProfile';
@@ -371,12 +372,6 @@ export function RouteCardBuilder({
     const totalWalkingMins = legs.reduce((acc, l) => acc + l.walking_minutes, 0);
     const totalRestMins = legs.reduce((acc, l) => acc + (l.rest_minutes || 0), 0);
     const totalExpeditionMins = totalWalkingMins + totalRestMins;
-
-    const formatHoursMins = (mins: number) => {
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return `${h}h ${String(m).padStart(2, '0')}m`;
-    };
 
     return (
         <div className="ems-builder-container">
