@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRoute, faMountainSun } from '@fortawesome/free-solid-svg-icons';
 import '../../css/ems-route-card.css';
 import { DEMTileManager } from '../components/DEMTileManager';
 import { RouteCardBuilder } from '../components/RouteCardBuilder';
@@ -56,14 +58,14 @@ export function RouteCardStudio({
                         className={`ems-studio-tab ${activeTab === 'sandbox' ? 'ems-studio-tab--active' : ''}`}
                         onClick={() => setActiveTab('sandbox')}
                     >
-                        🗺️ Route Card Studio & Sandbox
+                        <FontAwesomeIcon icon={faRoute} className="ems-tab-icon" /> Route Card Studio &amp; Sandbox
                     </button>
                     <button
                         type="button"
                         className={`ems-studio-tab ${activeTab === 'dem_manager' ? 'ems-studio-tab--active' : ''}`}
                         onClick={() => setActiveTab('dem_manager')}
                     >
-                        ⛰️ Local DEM Tile Manager
+                        <FontAwesomeIcon icon={faMountainSun} className="ems-tab-icon" /> Local DEM Tile Manager
                     </button>
                 </div>
             )}

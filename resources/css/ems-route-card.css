@@ -399,6 +399,33 @@
     color: #ffffff;
 }
 
+.ems-tab-icon {
+    margin-right: 6px;
+    font-size: 13px;
+}
+
+.ems-day-tab-dist {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+.ems-loading-state {
+    text-align: center;
+    padding: 32px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin: 20px 0;
+    color: #64748b;
+}
+
+.ems-loading-spinner {
+    font-size: 28px;
+    color: #2563eb;
+    margin-bottom: 12px;
+}
+
 /* Top Builder Toolbar */
 .ems-builder-toolbar {
     display: flex;

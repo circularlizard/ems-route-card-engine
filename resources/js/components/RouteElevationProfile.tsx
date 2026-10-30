@@ -67,7 +67,9 @@ export function RouteElevationProfile({
 
             activeLegFillPath = `M ${startX} ${bottomY}`;
             for (let i = activeLeg.start_vertex_index; i <= activeLeg.end_vertex_index; i++) {
-                activeLegFillPath += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+                if (vertices[i]) {
+                    activeLegFillPath += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+                }
             }
             activeLegFillPath += ` L ${endX} ${bottomY} Z`;
         }
@@ -173,12 +175,14 @@ export function RouteElevationProfile({
                 />
 
                 {/* Active Leg Line Segment */}
-                {activeLeg && (
+                {activeLeg && vertices[activeLeg.start_vertex_index] && (
                     <path
                         d={(() => {
                             let p = `M ${getX(vertices[activeLeg.start_vertex_index].dist_from_start_m)} ${getY(vertices[activeLeg.start_vertex_index].ele_dem)}`;
                             for (let i = activeLeg.start_vertex_index + 1; i <= activeLeg.end_vertex_index; i++) {
-                                p += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+                                if (vertices[i]) {
+                                    p += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+                                }
                             }
                             return p;
                         })()}

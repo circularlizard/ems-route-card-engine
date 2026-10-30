@@ -67,7 +67,7 @@ describe('RouteCardStudio', () => {
         expect(screen.getByText(/Local DEM Tile Manager/i)).toBeInTheDocument();
 
         // Check RouteCardBuilder elements
-        expect(screen.getByText(/Day 1/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
         expect(screen.getByText(/Save Draft/i)).toBeInTheDocument();
         expect(screen.getByText(/Export PDF/i)).toBeInTheDocument();
     });
@@ -90,6 +90,6 @@ describe('RouteCardStudio', () => {
         const sandboxTab = screen.getByText(/Route Card Studio & Sandbox/i);
         fireEvent.click(sandboxTab);
 
-        expect(screen.getByText(/Day 1/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
     });
 });
