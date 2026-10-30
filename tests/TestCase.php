@@ -23,6 +23,10 @@ abstract class TestCase extends PHPUnitTestCase {
         Functions\when( 'sanitize_text_field' )->returnArg( 1 );
         Functions\when( 'current_user_can' )->justReturn( true );
         Functions\when( 'get_current_user_id' )->justReturn( 1 );
+        Functions\when( 'add_shortcode' )->justReturn( true );
+        Functions\when( 'shortcode_atts' )->alias( function( $pairs, $atts ) {
+            return array_merge( $pairs, (array) $atts );
+        } );
     }
 
     protected function tearDown(): void {

@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 /**
  * EMS Route Card & Terrain Engine Styles
  */
@@ -359,3 +361,1134 @@
     color: #b91c1c !important;
     text-decoration: underline;
 }
+
+/* ==========================================================================
+   Phase 5: Route Card Studio & Mobile UX Styles
+   ========================================================================== */
+
+/* Day Stepper Tabs */
+.ems-day-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 8px;
+    overflow-x: auto;
+}
+
+.ems-day-tab {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.ems-day-tab:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.ems-day-tab--active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+/* Top Builder Toolbar */
+.ems-builder-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ems-builder-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 260px;
+}
+
+.ems-route-title-input {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: transparent;
+    width: 100%;
+    max-width: 450px;
+    transition: all 0.15s ease;
+}
+
+.ems-route-title-input:hover,
+.ems-route-title-input:focus {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ems-badge-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ems-badge-status--draft {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ems-badge-status--submitted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.ems-badge-status--approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.ems-badge-status--changes_requested {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.ems-builder-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Common Buttons */
+.ems-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.ems-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ems-btn--primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.ems-btn--primary:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.ems-btn--secondary {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+}
+
+.ems-btn--secondary:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.ems-btn--subtle {
+    background: transparent;
+    color: #64748b;
+}
+
+.ems-btn--subtle:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.ems-btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    cursor: pointer;
+}
+
+.ems-btn-xs:hover {
+    background: #dbeafe;
+}
+
+.ems-btn-icon {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ems-btn-icon:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* Empty State GPX Dropzone */
+.ems-gpx-dropzone {
+    border: 2px dashed #94a3b8;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    margin: 20px 0;
+    transition: all 0.2s ease;
+}
+
+.ems-gpx-dropzone:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.ems-dropzone-icon {
+    font-size: 40px;
+    color: #3b82f6;
+    margin-bottom: 12px;
+}
+
+.ems-gpx-dropzone h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ems-gpx-dropzone p {
+    margin: 0 0 20px 0;
+    color: #64748b;
+    font-size: 14px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Summary Stats Bar */
+.ems-route-stats-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
+
+.ems-stat-pill {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 10px;
+    border-right: 1px solid #e2e8f0;
+}
+
+.ems-stat-pill:last-of-type {
+    border-right: none;
+}
+
+.ems-stat-pill__label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.ems-stat-pill__val {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ems-stat-pill--highlight .ems-stat-pill__val {
+    color: #2563eb;
+}
+
+.ems-view-toggle {
+    margin-left: auto;
+    display: flex;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: 6px;
+}
+
+.ems-view-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ems-view-btn--active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Split Layout */
+.ems-studio-split-layout {
+    display: grid;
+    grid-template-columns: 52% 48%;
+    gap: 20px;
+    align-items: start;
+}
+
+.ems-studio-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Interactive Map Container */
+.ems-route-map-wrapper {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ems-route-map__toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 6px 10px;
+}
+
+.ems-route-map__layer-select {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ems-map-btn-icon {
+    color: #64748b;
+    margin-right: 4px;
+    font-size: 12px;
+}
+
+.ems-map-btn {
+    background: none;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+}
+
+.ems-map-btn--active {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.ems-route-map__actions {
+    display: flex;
+    gap: 4px;
+}
+
+.ems-map-action-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ems-map-action-btn:hover {
+    background: #f1f5f9;
+}
+
+.ems-route-map-canvas {
+    height: 380px;
+    width: 100%;
+}
+
+.ems-route-map-wrapper--expanded .ems-route-map-canvas {
+    height: 580px;
+}
+
+/* Custom Leaflet Marker Badges */
+.ems-map-marker {
+    background: transparent;
+    border: none;
+}
+
+.ems-marker-pin {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border: 2px solid #ffffff;
+}
+
+.ems-marker-pin--finish {
+    background: #ef4444 !important;
+}
+
+/* Elevation Profile SVG */
+.ems-elevation-profile-container {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ems-elevation-profile-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.ems-elevation-profile-title {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ems-elevation-profile-svg {
+    width: 100%;
+    height: 130px;
+    display: block;
+    cursor: crosshair;
+}
+
+/* Leg Cards Deck */
+.ems-cards-deck-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ems-cards-deck-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ems-leg-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Single Leg Card */
+.ems-leg-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.15s ease-in-out;
+    border-left: 4px solid #94a3b8;
+    cursor: pointer;
+}
+
+.ems-leg-card:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.ems-leg-card--active {
+    border-left-color: #2563eb;
+    border-color: #93c5fd;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.ems-leg-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ems-leg-card__title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.ems-leg-badge {
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.ems-leg-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ems-arrow-icon {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.ems-leg-name-editor {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ems-input-sm {
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Checkpoints Badges */
+.ems-leg-checkpoints-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.ems-checkpoint-pill {
+    display: flex;
+    flex-direction: column;
+}
+
+.ems-pill-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.05em;
+}
+
+.ems-pill-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.ems-pill-coord {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+}
+
+/* Metrics Row */
+.ems-leg-metrics {
+    display: flex;
+    justify-content: space-between;
+    background: #f1f5f9;
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.ems-metric-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ems-metric-icon {
+    color: #64748b;
+    font-size: 11px;
+}
+
+/* Input Blocks */
+.ems-leg-input-block {
+    margin-bottom: 12px;
+    cursor: default;
+}
+
+.ems-input-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.ems-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ems-field-hint {
+    font-weight: 400;
+    color: #64748b;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.ems-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    line-height: 1.4;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.ems-textarea:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.ems-textarea--sm {
+    font-size: 12px;
+}
+
+/* Coaching Chips */
+.ems-coaching-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.ems-chip {
+    border: none;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.ems-chip--coach {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.ems-chip--coach:hover {
+    background: #fde68a;
+}
+
+.ems-chip--action {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.ems-chip--action:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Quality Badges */
+.ems-quality-badge {
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ems-quality-badge--good {
+    color: #166534;
+}
+
+.ems-quality-badge--medium {
+    color: #d97706;
+}
+
+.ems-quality-badge--poor {
+    color: #dc2626;
+}
+
+/* Split Input Columns */
+.ems-leg-split-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.ems-rest-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.ems-input-number {
+    width: 55px;
+    padding: 4px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.ems-unit {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.ems-quick-rest-btns {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.ems-quick-rest-btns button {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.ems-quick-rest-btns button:hover {
+    background: #e2e8f0;
+}
+
+.ems-mt-1 {
+    margin-top: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Coaching Banner */
+.ems-coaching-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+}
+
+.ems-coaching-banner--warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.ems-coaching-banner--success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ems-coaching-banner__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.ems-coaching-banner__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ems-coaching-banner__icon {
+    font-size: 15px;
+}
+
+.ems-coaching-list {
+    margin: 10px 0 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ems-coaching-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.ems-coaching-item__icon {
+    margin-top: 2px;
+    font-size: 11px;
+}
+
+.ems-coaching-item--warning .ems-coaching-item__icon {
+    color: #d97706;
+}
+
+.ems-coaching-item--info .ems-coaching-item__icon {
+    color: #2563eb;
+}
+
+/* Status Alert */
+.ems-status-alert {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ems-status-alert--success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+}
+
+.ems-status-alert--error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+/* Table View Styles */
+.ems-table-responsive-wrapper {
+    overflow-x: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.ems-route-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: left;
+}
+
+.ems-route-table th {
+    background: #f8fafc;
+    padding: 10px 8px;
+    font-weight: 700;
+    color: #475569;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.ems-route-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+
+.ems-route-table__row:hover {
+    background: #f8fafc;
+}
+
+.ems-route-table__row--active {
+    background: #eff6ff !important;
+}
+
+.ems-table-leg-badge {
+    background: #e2e8f0;
+    color: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.ems-table-point-name {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.ems-table-point-coord {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+}
+
+.ems-table-textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.ems-table-input-number {
+    width: 45px;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.ems-table-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.font-mono {
+    font-family: monospace;
+}
+
+.ems-text-center {
+    text-align: center;
+}
+
+/* Re-import Modal */
+.ems-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+
+.ems-modal-dialog {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 650px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.ems-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ems-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ems-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.ems-modal-intro {
+    font-size: 13px;
+    color: #475569;
+    margin: 0 0 16px 0;
+}
+
+.ems-diff-summary-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.ems-diff-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.ems-diff-pill--matched {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.ems-diff-pill--modified {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.ems-diff-pill--new {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.ems-diff-pill--removed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.ems-diff-table-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.ems-diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.ems-diff-table th {
+    background: #f8fafc;
+    padding: 8px 10px;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ems-diff-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ems-diff-desc-cell {
+    max-width: 200px;
+}
+
+.ems-diff-desc-text {
+    font-style: italic;
+    color: #334155;
+}
+
+.ems-modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ==========================================================================
+   Responsive Architecture & Mobile Viewport (< 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .ems-studio-split-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    /* Sticky Top Map on Mobile */
+    .ems-studio-pane--map {
+        position: sticky;
+        top: 32px;
+        z-index: 100;
+        background: #ffffff;
+    }
+
+    .ems-route-map-canvas {
+        height: 250px;
+    }
+
+    .ems-elevation-profile-svg {
+        height: 90px;
+    }
+
+    .ems-leg-split-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .ems-leg-checkpoints-row {
+        grid-template-columns: 1fr;
+    }
+
+    .ems-hide-sm {
+        display: none !important;
+    }
+
+    .ems-route-title-input {
+        font-size: 16px;
+    }
+
+    .ems-builder-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ems-builder-actions {
+        justify-content: flex-end;
+    }
+}
+
