@@ -900,8 +900,80 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    transition: all 0.15s ease-in-out;
+}
+
+.ems-leg-card--active .ems-leg-card__line-1 {
+    background: #eef2ff;
+    border-color: #cbd5e1;
+}
+
+.ems-leg-endpoints {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: nowrap;
+    flex: 1;
+}
+
+.ems-endpoint {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+}
+
+.ems-endpoint-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.ems-endpoint-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
+.ems-endpoint-input {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: transparent;
+    transition: all 0.15s ease-in-out;
+    width: 100%;
+    max-width: 180px;
+}
+
+.ems-endpoint-input:hover {
+    border-color: #cbd5e1;
+    background: #ffffff;
+}
+
+.ems-endpoint-input:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.ems-endpoint-meta {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+    white-space: nowrap;
+    padding-left: 6px;
 }
 
 .ems-leg-number-badge {

@@ -22,8 +22,10 @@ export function RouteElevationProfile({
         return null;
     }
 
-    const totalDistM = vertices[vertices.length - 1].dist_from_start_m;
+    const totalDistM = vertices[vertices.length - 1]?.dist_from_start_m || 0;
     if (totalDistM <= 0) return null;
+
+    const totalDistKm = totalDistM / 1000.0;
 
     // Determine min and max elevation with padding
     const elevations = vertices.map((v) => v.ele_dem);
@@ -34,11 +36,11 @@ export function RouteElevationProfile({
     const eleRange = Math.max(50, maxEle - minEle);
 
     const width = 800;
-    const height = 140;
+    const height = 150;
     const paddingLeft = 45;
-    const paddingRight = 20;
+    const paddingRight = 30;
     const paddingTop = 15;
-    const paddingBottom = 25;
+    const paddingBottom = 30;
 
     const plotWidth = width - paddingLeft - paddingRight;
     const plotHeight = height - paddingTop - paddingBottom;
@@ -50,7 +52,9 @@ export function RouteElevationProfile({
     // Build overall profile SVG path
     let fullProfilePath = `M ${getX(vertices[0].dist_from_start_m)} ${getY(vertices[0].ele_dem)}`;
     for (let i = 1; i < vertices.length; i++) {
-        fullProfilePath += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+        if (vertices[i]) {
+            fullProfilePath += ` L ${getX(vertices[i].dist_from_start_m)} ${getY(vertices[i].ele_dem)}`;
+        }
     }
 
     // Build active leg highlight path
@@ -75,6 +79,15 @@ export function RouteElevationProfile({
         }
     }
 
+    // Generate distance axis intervals (4-5 ticks along the bottom)
+    const distanceTicks = [
+        0,
+        Math.round(totalDistKm * 0.25 * 10) / 10,
+        Math.round(totalDistKm * 0.5 * 10) / 10,
+        Math.round(totalDistKm * 0.75 * 10) / 10,
+        Math.round(totalDistKm * 10) / 10,
+    ];
+
     // Handle mouse/touch scrub
     const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
         if (!svgRef.current || !onHoverVertex) return;
@@ -83,7 +96,6 @@ export function RouteElevationProfile({
         const ratio = (clientX - paddingLeft) / plotWidth;
         const targetDistM = Math.max(0, Math.min(1.0, ratio)) * totalDistM;
 
-        // Binary search or scan for closest vertex
         let closestIdx = 0;
         let minDiff = Infinity;
         for (let i = 0; i < vertices.length; i++) {
@@ -101,12 +113,14 @@ export function RouteElevationProfile({
         if (onHoverVertex) onHoverVertex(null);
     };
 
+    const lastLeg = legs[legs.length - 1];
+
     return (
         <div className="ems-elevation-profile-container">
             <div className="ems-elevation-profile-header">
                 <span className="ems-elevation-profile-title">Elevation Profile</span>
                 <span className="ems-elevation-profile-stats">
-                    Min: <b>{Math.round(rawMinEle)}m</b> &bull; Max: <b>{Math.round(rawMaxEle)}m</b> &bull; Total: <b>{Math.round(totalDistM / 1000 * 10) / 10}km</b>
+                    Min: <b>{Math.round(rawMinEle)}m</b> &bull; Max: <b>{Math.round(rawMaxEle)}m</b> &bull; Total: <b>{totalDistKm.toFixed(1)}km</b>
                 </span>
             </div>
 
@@ -119,11 +133,11 @@ export function RouteElevationProfile({
             >
                 <defs>
                     <linearGradient id="activeLegGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.55" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.08" />
                     </linearGradient>
                     <linearGradient id="fullTrackGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.25" />
+                        <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.3" />
                         <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.05" />
                     </linearGradient>
                 </defs>
@@ -154,6 +168,42 @@ export function RouteElevationProfile({
                     );
                 })}
 
+                {/* Baseline X-Axis (Distance Axis) */}
+                <line
+                    x1={paddingLeft}
+                    y1={height - paddingBottom}
+                    x2={width - paddingRight}
+                    y2={height - paddingBottom}
+                    stroke="#cbd5e1"
+                    strokeWidth="1"
+                />
+
+                {/* Distance Axis Tick Marks and Labels */}
+                {distanceTicks.map((tickKm, i) => {
+                    const x = getX(tickKm * 1000);
+                    return (
+                        <g key={i}>
+                            <line
+                                x1={x}
+                                y1={height - paddingBottom}
+                                x2={x}
+                                y2={height - paddingBottom + 4}
+                                stroke="#94a3b8"
+                                strokeWidth="1"
+                            />
+                            <text
+                                x={x}
+                                y={height - paddingBottom + 16}
+                                textAnchor="middle"
+                                fontSize="9"
+                                fill="#64748b"
+                            >
+                                {tickKm}km
+                            </text>
+                        </g>
+                    );
+                })}
+
                 {/* Full Profile Background Area */}
                 <path
                     d={`${fullProfilePath} L ${getX(totalDistM)} ${getY(minEle)} L ${getX(0)} ${getY(minEle)} Z`}
@@ -165,13 +215,14 @@ export function RouteElevationProfile({
                     <path d={activeLegFillPath} fill="url(#activeLegGrad)" />
                 )}
 
-                {/* Main Profile Line */}
+                {/* Main Profile Line for the ENTIRE route */}
                 <path
                     d={fullProfilePath}
                     fill="none"
-                    stroke="#475569"
-                    strokeWidth="2"
+                    stroke="#64748b"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
 
                 {/* Active Leg Line Segment */}
@@ -188,12 +239,13 @@ export function RouteElevationProfile({
                         })()}
                         fill="none"
                         stroke="#2563eb"
-                        strokeWidth="3.5"
+                        strokeWidth="4"
                         strokeLinecap="round"
+                        strokeLinejoin="round"
                     />
                 )}
 
-                {/* Checkpoint Markers on Profile */}
+                {/* Checkpoint Markers (Start of each leg) */}
                 {legs.map((leg, idx) => {
                     const v = vertices[leg.start_vertex_index];
                     if (!v) return null;
@@ -219,24 +271,69 @@ export function RouteElevationProfile({
                             <circle
                                 cx={cx}
                                 cy={cy}
-                                r={isActive ? 5 : 3.5}
+                                r={isActive ? 5.5 : 4}
                                 fill={isActive ? '#2563eb' : '#ffffff'}
                                 stroke={isActive ? '#ffffff' : '#64748b'}
                                 strokeWidth="2"
                             />
                             <text
                                 x={cx}
-                                y={height - paddingBottom + 12}
+                                y={height - paddingBottom - 6}
                                 textAnchor="middle"
                                 fontSize="9"
-                                fontWeight={isActive ? '700' : '500'}
-                                fill={isActive ? '#2563eb' : '#64748b'}
+                                fontWeight={isActive ? '700' : '600'}
+                                fill={isActive ? '#2563eb' : '#475569'}
                             >
                                 {idx === 0 ? 'S' : `${idx}`}
                             </text>
                         </g>
                     );
                 })}
+
+                {/* Finish Checkpoint Marker (at the very end of the route) */}
+                {lastLeg && vertices[lastLeg.end_vertex_index] && (() => {
+                    const vFinish = vertices[lastLeg.end_vertex_index];
+                    const cx = getX(vFinish.dist_from_start_m);
+                    const cy = getY(vFinish.ele_dem);
+                    const isLastActive = activeLegIndex === legs.length - 1;
+
+                    return (
+                        <g
+                            key="finish-marker"
+                            className="ems-elevation-checkpoint-marker"
+                            onClick={() => onSelectLeg(legs.length - 1)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <line
+                                x1={cx}
+                                y1={cy}
+                                x2={cx}
+                                y2={height - paddingBottom}
+                                stroke={isLastActive ? '#ef4444' : '#f87171'}
+                                strokeWidth="1.5"
+                                strokeDasharray="2,2"
+                            />
+                            <circle
+                                cx={cx}
+                                cy={cy}
+                                r={isLastActive ? 5.5 : 4}
+                                fill="#ef4444"
+                                stroke="#ffffff"
+                                strokeWidth="2"
+                            />
+                            <text
+                                x={cx}
+                                y={height - paddingBottom - 6}
+                                textAnchor="middle"
+                                fontSize="9"
+                                fontWeight="700"
+                                fill="#ef4444"
+                            >
+                                F
+                            </text>
+                        </g>
+                    );
+                })()}
             </svg>
         </div>
     );

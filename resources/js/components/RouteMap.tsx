@@ -35,7 +35,7 @@ export function RouteMap({
     const loadedRouteSigRef = useRef<string>('');
     const prevActiveLegIndexRef = useRef<number | null>(null);
 
-    const [baseLayer, setBaseLayer] = useState<'cyclosm' | 'esri' | 'osm' | 'opentopo' | 'os'>('cyclosm');
+    const [baseLayer, setBaseLayer] = useState<'opentopo' | 'cyclosm' | 'esri' | 'osm' | 'os'>('opentopo');
     const [isExpanded, setIsExpanded] = useState(false);
 
     // Initialize Leaflet Map
@@ -73,9 +73,9 @@ export function RouteMap({
             }
         });
 
-        let tileUrl = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
-        let maxZoom = 20;
-        let attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Tiles courtesy of <a href="https://www.cyclosm.org">CyclOSM</a>';
+        let tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+        let maxZoom = 17;
+        let attribution = '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (&copy; <a href="https://openstreetmap.org">OSM</a>)';
         let subdomains: string | string[] = ['a', 'b', 'c'];
 
         if (baseLayer === 'os' && osMapsApiKey) {
@@ -83,6 +83,11 @@ export function RouteMap({
             maxZoom = 18;
             attribution = 'Contains OS data &copy; Crown copyright and database right';
             subdomains = [];
+        } else if (baseLayer === 'cyclosm') {
+            tileUrl = 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png';
+            maxZoom = 20;
+            attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Tiles courtesy of <a href="https://www.cyclosm.org">CyclOSM</a>';
+            subdomains = ['a', 'b', 'c'];
         } else if (baseLayer === 'esri') {
             tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
             maxZoom = 19;
@@ -93,11 +98,6 @@ export function RouteMap({
             maxZoom = 19;
             attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
             subdomains = [];
-        } else if (baseLayer === 'opentopo') {
-            tileUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-            maxZoom = 17;
-            attribution = '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (&copy; <a href="https://openstreetmap.org">OSM</a>)';
-            subdomains = ['a', 'b', 'c'];
         }
 
         const tileLayer = L.tileLayer(tileUrl, {
@@ -330,11 +330,19 @@ export function RouteMap({
                     <FontAwesomeIcon icon={faLayerGroup} className="ems-map-btn-icon" />
                     <button
                         type="button"
+                        className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
+                        onClick={() => setBaseLayer('opentopo')}
+                        title="Topographic Contours (OpenTopoMap)"
+                    >
+                        OpenTopo
+                    </button>
+                    <button
+                        type="button"
                         className={`ems-map-btn ${baseLayer === 'cyclosm' ? 'ems-map-btn--active' : ''}`}
                         onClick={() => setBaseLayer('cyclosm')}
                         title="Outdoor Topo with Contours & Trails (CyclOSM)"
                     >
-                        Outdoor Topo
+                        CyclOSM Topo
                     </button>
                     <button
                         type="button"
@@ -351,14 +359,6 @@ export function RouteMap({
                         title="Standard OpenStreetMap"
                     >
                         Street
-                    </button>
-                    <button
-                        type="button"
-                        className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
-                        onClick={() => setBaseLayer('opentopo')}
-                        title="OpenTopoMap (May be blocked by corporate VPN firewalls)"
-                    >
-                        OpenTopo
                     </button>
                     {osMapsApiKey && (
                         <button

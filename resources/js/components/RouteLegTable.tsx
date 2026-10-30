@@ -43,8 +43,7 @@ export function RouteLegTable({
                         <th style={{ width: '70px' }}>Dist (km)</th>
                         <th style={{ width: '70px' }}>Climb (m)</th>
                         <th style={{ width: '80px' }}>Walk Time</th>
-                        <th style={{ width: '90px' }}>Rest</th>
-                        <th style={{ width: '90px' }}>Project</th>
+                        <th style={{ width: '105px' }}>Project & Rest</th>
                         <th style={{ width: '80px' }}>Total</th>
                         <th>Navigation Description</th>
                         <th>Project Activity</th>
@@ -56,9 +55,8 @@ export function RouteLegTable({
                     {legs.map((leg, idx) => {
                         const isActive = idx === activeLegIndex;
                         const isLast = idx === legs.length - 1;
-                        const restMins = leg.rest_minutes || 0;
-                        const projectMins = leg.activity_minutes || (leg as any).project_minutes || 0;
-                        const totalMins = leg.walking_minutes + restMins + projectMins;
+                        const projectRestMins = leg.rest_minutes || 0;
+                        const totalMins = leg.walking_minutes + projectRestMins;
 
                         return (
                             <tr
@@ -85,29 +83,12 @@ export function RouteLegTable({
                                         <input
                                             type="number"
                                             min="0"
-                                            max="180"
+                                            max="300"
                                             className="ems-table-input-number"
-                                            value={restMins}
+                                            value={projectRestMins}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => handleTextChange(idx, 'rest_minutes', parseInt(e.target.value, 10) || 0)}
-                                            title="Rest Duration (minutes)"
-                                        />
-                                        <span className="font-mono" style={{ fontSize: '11px', color: '#64748b' }}>
-                                            m
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="240"
-                                            className="ems-table-input-number"
-                                            value={projectMins}
-                                            onClick={(e) => e.stopPropagation()}
-                                            onChange={(e) => handleTextChange(idx, 'activity_minutes', parseInt(e.target.value, 10) || 0)}
-                                            title="Project / Aim Duration (minutes)"
+                                            title="Project & Rest Duration (minutes)"
                                         />
                                         <span className="font-mono" style={{ fontSize: '11px', color: '#64748b' }}>
                                             m

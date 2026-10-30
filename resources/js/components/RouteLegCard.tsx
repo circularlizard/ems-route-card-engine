@@ -44,7 +44,6 @@ export function RouteLegCard({
     const navDescId = useId();
     const escapeRouteId = useId();
     const restMinsId = useId();
-    const projectMinsId = useId();
     const activityNotesId = useId();
 
     // Auto-scroll active card into view when selected
@@ -80,9 +79,9 @@ export function RouteLegCard({
         qualityStatus = 'medium';
     }
 
-    const restMins = leg.rest_minutes || 0;
-    const projectMins = leg.activity_minutes || (leg as any).project_minutes || 0;
-    const totalLegMins = leg.walking_minutes + restMins + projectMins;
+    // Project & rest time is unified into one number
+    const projectRestMins = leg.rest_minutes || 0;
+    const totalLegMins = leg.walking_minutes + projectRestMins;
 
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         onUpdateLeg({
@@ -103,7 +102,7 @@ export function RouteLegCard({
             className={`ems-leg-card ${isActive ? 'ems-leg-card--active' : ''}`}
             onClick={onSelect}
         >
-            {/* Line 1: Clear Header with Leg Number and Start ➔ End Checkpoints */}
+            {/* Line 1: Clear Header with Contrasting Background, Leg Number, and Start ➔ End Checkpoints */}
             <div className="ems-leg-card__line-1">
                 <span className="ems-leg-number-badge" title={`Leg ${leg.leg_number}`}>
                     {leg.leg_number}
@@ -112,36 +111,40 @@ export function RouteLegCard({
                 <div className="ems-leg-endpoints" onClick={(e) => e.stopPropagation()}>
                     <div className="ems-endpoint">
                         <span className="ems-endpoint-label">From:</span>
-                        <input
-                            id={startNameId}
-                            type="text"
-                            className="ems-endpoint-input"
-                            value={startName}
-                            onChange={(e) => handleTextChange('start_name', e.target.value)}
-                            placeholder="Start point"
-                            title="Edit start checkpoint name"
-                        />
-                        {startGrid && (
-                            <span className="ems-endpoint-meta">({startGrid} • {Math.round(startEle)}m)</span>
-                        )}
+                        <div className="ems-endpoint-col">
+                            <input
+                                id={startNameId}
+                                type="text"
+                                className="ems-endpoint-input"
+                                value={startName}
+                                onChange={(e) => handleTextChange('start_name', e.target.value)}
+                                placeholder="Start point"
+                                title="Edit start checkpoint name"
+                            />
+                            {startGrid && (
+                                <span className="ems-endpoint-meta">{startGrid} • {Math.round(startEle)}m</span>
+                            )}
+                        </div>
                     </div>
 
                     <FontAwesomeIcon icon={faArrowRight} className="ems-arrow-icon" />
 
                     <div className="ems-endpoint">
                         <span className="ems-endpoint-label">To:</span>
-                        <input
-                            id={endNameId}
-                            type="text"
-                            className="ems-endpoint-input"
-                            value={endName}
-                            onChange={(e) => handleTextChange('end_name', e.target.value)}
-                            placeholder="End point"
-                            title="Edit end checkpoint name"
-                        />
-                        {endGrid && (
-                            <span className="ems-endpoint-meta">({endGrid} • {Math.round(endEle)}m)</span>
-                        )}
+                        <div className="ems-endpoint-col">
+                            <input
+                                id={endNameId}
+                                type="text"
+                                className="ems-endpoint-input"
+                                value={endName}
+                                onChange={(e) => handleTextChange('end_name', e.target.value)}
+                                placeholder="End point"
+                                title="Edit end checkpoint name"
+                            />
+                            {endGrid && (
+                                <span className="ems-endpoint-meta">{endGrid} • {Math.round(endEle)}m</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -189,7 +192,7 @@ export function RouteLegCard({
                 <div className="ems-metric-item" title="Walking Time & Total Leg Duration">
                     <FontAwesomeIcon icon={faClock} className="ems-metric-icon" />
                     <span><b>{formatHoursMins(leg.walking_minutes)}</b> walk</span>
-                    {(restMins > 0 || projectMins > 0) && (
+                    {projectRestMins > 0 && (
                         <span className="ems-metric-total">
                             ({formatHoursMins(totalLegMins)} total)
                         </span>
@@ -237,41 +240,25 @@ export function RouteLegCard({
                 />
             </div>
 
-            {/* Line 6: Project & Rest Time and Project Activity */}
+            {/* Line 6: Project & Rest Time (One Number) and Project Activity */}
             <div className="ems-leg-card__line-6 ems-leg-project-row" onClick={(e) => e.stopPropagation()}>
                 <div className="ems-leg-input-block ems-leg-input-block--time">
-                    <label className="ems-field-label">
+                    <label htmlFor={restMinsId} className="ems-field-label">
                         <FontAwesomeIcon icon={faCoffee} /> Project & Rest Time
                     </label>
                     <div className="ems-time-inputs-group">
                         <div className="ems-time-input-field">
-                            <label htmlFor={restMinsId} className="ems-time-field-label">Rest:</label>
                             <input
                                 id={restMinsId}
                                 type="number"
                                 min="0"
-                                max="180"
+                                max="300"
                                 step="5"
                                 className="ems-input-number"
-                                value={restMins}
+                                value={projectRestMins}
                                 onChange={(e) => handleTextChange('rest_minutes', parseInt(e.target.value, 10) || 0)}
                             />
-                            <span className="ems-unit">mins ({formatHoursMins(restMins)})</span>
-                        </div>
-
-                        <div className="ems-time-input-field">
-                            <label htmlFor={projectMinsId} className="ems-time-field-label">Project:</label>
-                            <input
-                                id={projectMinsId}
-                                type="number"
-                                min="0"
-                                max="240"
-                                step="5"
-                                className="ems-input-number"
-                                value={projectMins}
-                                onChange={(e) => handleTextChange('activity_minutes', parseInt(e.target.value, 10) || 0)}
-                            />
-                            <span className="ems-unit">mins ({formatHoursMins(projectMins)})</span>
+                            <span className="ems-unit">mins ({formatHoursMins(projectRestMins)})</span>
                         </div>
                     </div>
                 </div>
