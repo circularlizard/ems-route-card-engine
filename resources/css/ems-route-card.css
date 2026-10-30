@@ -706,6 +706,13 @@
     flex-direction: column;
 }
 
+.ems-studio-pane--map {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    z-index: 10;
+}
+
 /* Interactive Map Container */
 .ems-route-map-wrapper {
     background: #ffffff;

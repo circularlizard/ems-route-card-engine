@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     calculateBearing,
     calculateNaismithTime,
+    getCompassDirection,
     buildLegFromVertices,
     splitLegAtVertex,
     mergeLegsWithNext,
@@ -234,5 +235,17 @@ describe('route-calculations utilities', () => {
         expect(result.reconciledLegs[0].escape_route).toBe('Bail down valley track to road');
         expect(result.reconciledLegs[0].rest_minutes).toBe(15);
         expect(result.diffs[0].status).toBe('matched');
+    });
+
+    it('converts magnetic bearings to real cardinal compass directions', () => {
+        expect(getCompassDirection(0)).toBe('N');
+        expect(getCompassDirection(360)).toBe('N');
+        expect(getCompassDirection(45)).toBe('NE');
+        expect(getCompassDirection(90)).toBe('E');
+        expect(getCompassDirection(135)).toBe('SE');
+        expect(getCompassDirection(180)).toBe('S');
+        expect(getCompassDirection(225)).toBe('SW');
+        expect(getCompassDirection(270)).toBe('W');
+        expect(getCompassDirection(315)).toBe('NW');
     });
 });

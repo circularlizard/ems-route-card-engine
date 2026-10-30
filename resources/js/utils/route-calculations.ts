@@ -35,6 +35,16 @@ export function calculateBearing(
 }
 
 /**
+ * Converts a compass bearing in degrees (0-360) into an 8/16-point cardinal direction (e.g. N, NE, E, SE, S, SW, W, NW).
+ */
+export function getCompassDirection(bearingDeg: number): string {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const normalized = ((bearingDeg % 360) + 360) % 360;
+    const index = Math.round(normalized / 22.5) % 16;
+    return directions[index];
+}
+
+/**
  * Calculates Naismith walking time with Langmuir descent adjustments.
  */
 export function calculateNaismithTime(

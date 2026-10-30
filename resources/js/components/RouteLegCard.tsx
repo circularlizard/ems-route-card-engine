@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faArrowRight,
@@ -14,10 +14,12 @@ import {
     faTriangleExclamation,
     faCoffee,
 } from '@fortawesome/free-solid-svg-icons';
-import { RouteLeg } from '../types/route-card';
+import { RouteLeg, RouteVertex } from '../types/route-card';
+import { getCompassDirection } from '../utils/route-calculations';
 
 interface RouteLegCardProps {
     leg: RouteLeg;
+    vertices?: RouteVertex[];
     isActive: boolean;
     isLastLeg: boolean;
     onSelect: () => void;
@@ -28,6 +30,7 @@ interface RouteLegCardProps {
 
 export function RouteLegCard({
     leg,
+    vertices,
     isActive,
     isLastLeg,
     onSelect,
@@ -36,6 +39,8 @@ export function RouteLegCard({
     onMergeLeg,
 }: RouteLegCardProps) {
     const [isEditingNames, setIsEditingNames] = useState(false);
+    const cardRef = useRef<HTMLDivElement | null>(null);
+
     const startNameId = useId();
     const endNameId = useId();
     const navDescId = useId();
@@ -43,8 +48,31 @@ export function RouteLegCard({
     const activityNotesId = useId();
     const escapeRouteId = useId();
 
+    // Auto-scroll active card into view when selected
+    useEffect(() => {
+        if (isActive && cardRef.current && typeof cardRef.current.scrollIntoView === 'function') {
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [isActive]);
+
+    // Resilient fallback resolution for checkpoint names, coordinates, and elevations
+    const vStart = vertices && vertices[leg.start_vertex_index];
+    const vEnd = vertices && vertices[leg.end_vertex_index];
+
+    const startName = leg.start_name || (leg as any).checkpoint_from || (leg.leg_number === 1 ? 'Start' : `Checkpoint ${leg.leg_number}`);
+    const endName = leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`);
+
+    const startGrid = leg.start_grid_ref || (leg as any).start_grid_ref_6 || vStart?.grid_ref_6 || '';
+    const endGrid = leg.end_grid_ref || (leg as any).end_grid_ref_6 || vEnd?.grid_ref_6 || '';
+
+    const startEle = leg.start_elevation_m ?? vStart?.ele_dem ?? 0;
+    const endEle = leg.end_elevation_m ?? vEnd?.ele_dem ?? 0;
+
+    // Real compass direction computed from actual magnetic bearing
+    const compassDir = getCompassDirection(leg.magnetic_bearing);
+
     // Check description quality
-    const desc = leg.route_description || '';
+    const desc = leg.route_description || (leg as any).description || '';
     const wordCount = desc.trim() ? desc.trim().split(/\s+/).length : 0;
     const navKeywords = ['bearing', 'stream', 'burn', 'track', 'path', 'ridge', 'cairn', 'col', 'contour', 'handrail', 'wall', 'fence', 'summit'];
     const foundKeywords = navKeywords.filter((kw) => desc.toLowerCase().includes(kw));
@@ -59,6 +87,12 @@ export function RouteLegCard({
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         onUpdateLeg({
             ...leg,
+            start_name: startName,
+            end_name: endName,
+            start_grid_ref: startGrid,
+            end_grid_ref: endGrid,
+            start_elevation_m: startEle,
+            end_elevation_m: endEle,
             [field]: value,
         });
     };
@@ -70,6 +104,7 @@ export function RouteLegCard({
 
     return (
         <div
+            ref={cardRef}
             className={`ems-leg-card ${isActive ? 'ems-leg-card--active' : ''}`}
             onClick={onSelect}
         >
@@ -79,9 +114,9 @@ export function RouteLegCard({
                     <span className="ems-leg-badge">Leg {leg.leg_number}</span>
                     {!isEditingNames ? (
                         <h4 className="ems-leg-title" onClick={() => setIsEditingNames(true)} title="Click to rename checkpoints">
-                            <span className="ems-checkpoint-name">{leg.start_name}</span>
+                            <span className="ems-checkpoint-name">{startName}</span>
                             <FontAwesomeIcon icon={faArrowRight} className="ems-arrow-icon" />
-                            <span className="ems-checkpoint-name">{leg.end_name}</span>
+                            <span className="ems-checkpoint-name">{endName}</span>
                         </h4>
                     ) : (
                         <div className="ems-leg-name-editor" onClick={(e) => e.stopPropagation()}>
@@ -90,7 +125,7 @@ export function RouteLegCard({
                                 id={startNameId}
                                 type="text"
                                 className="ems-input-sm"
-                                value={leg.start_name}
+                                value={startName}
                                 onChange={(e) => handleTextChange('start_name', e.target.value)}
                                 placeholder="Start name"
                             />
@@ -100,7 +135,7 @@ export function RouteLegCard({
                                 id={endNameId}
                                 type="text"
                                 className="ems-input-sm"
-                                value={leg.end_name}
+                                value={endName}
                                 onChange={(e) => handleTextChange('end_name', e.target.value)}
                                 placeholder="End name"
                             />
@@ -144,14 +179,18 @@ export function RouteLegCard({
             <div className="ems-leg-checkpoints-row">
                 <div className="ems-checkpoint-pill ems-checkpoint-pill--origin">
                     <span className="ems-pill-label">FROM</span>
-                    <span className="ems-pill-val">{leg.start_name}</span>
-                    <span className="ems-pill-coord">{leg.start_grid_ref} ({leg.start_elevation_m}m)</span>
+                    <span className="ems-pill-val">{startName}</span>
+                    <span className="ems-pill-coord">
+                        {startGrid ? `${startGrid} • ${Math.round(startEle)}m` : `${Math.round(startEle)}m`}
+                    </span>
                 </div>
 
                 <div className="ems-checkpoint-pill ems-checkpoint-pill--dest">
                     <span className="ems-pill-label">TO</span>
-                    <span className="ems-pill-val">{leg.end_name}</span>
-                    <span className="ems-pill-coord">{leg.end_grid_ref} ({leg.end_elevation_m}m)</span>
+                    <span className="ems-pill-val">{endName}</span>
+                    <span className="ems-pill-coord">
+                        {endGrid ? `${endGrid} • ${Math.round(endEle)}m` : `${Math.round(endEle)}m`}
+                    </span>
                 </div>
             </div>
 
@@ -164,7 +203,7 @@ export function RouteLegCard({
 
                 <div className="ems-metric-item" title="Magnetic Bearing for compass navigation">
                     <FontAwesomeIcon icon={faCompass} className="ems-metric-icon" />
-                    <span><b>{String(leg.magnetic_bearing).padStart(3, '0')}°</b> mag</span>
+                    <span><b>{String(leg.magnetic_bearing).padStart(3, '0')}°</b> mag ({compassDir})</span>
                 </div>
 
                 <div className="ems-metric-item" title="Elevation Ascent">
@@ -184,7 +223,7 @@ export function RouteLegCard({
                     <label htmlFor={navDescId} className="ems-field-label">
                         Route Navigation Description
                         <span className="ems-field-hint">
-                            (How to get from {leg.start_name} to {leg.end_name})
+                            (How to get from {startName} to {endName})
                         </span>
                     </label>
 
@@ -196,52 +235,56 @@ export function RouteLegCard({
                     </div>
                 </div>
 
-                {/* Coaching Guidance Chips */}
+                {/* Real Contextual Coaching Guidance Chips */}
                 <div className="ems-coaching-chips">
                     {leg.ascent_m >= 120 && (
                         <button
                             type="button"
                             className="ems-chip ems-chip--coach"
-                            onClick={() => insertChipText('Steep climb, pacing steadily with zig-zag ascent')}
+                            onClick={() => insertChipText(`Steep climb (+${Math.round(leg.ascent_m)}m), pacing steadily ${compassDir} with zig-zag ascent`)}
+                            title="Insert steep climb pacing guidance"
                         >
-                            <FontAwesomeIcon icon={faLightbulb} /> + Steeper ascent pacing
+                            <FontAwesomeIcon icon={faLightbulb} /> + Steeper ascent pacing ({compassDir})
                         </button>
                     )}
 
-                    {leg.distance_km >= 1.5 && (
+                    {leg.distance_km >= 1.2 && (
                         <button
                             type="button"
                             className="ems-chip ems-chip--coach"
-                            onClick={() => insertChipText('Following ridge handrail NE')}
+                            onClick={() => insertChipText(`Following handrail heading ${compassDir} on bearing ${String(leg.magnetic_bearing).padStart(3, '0')}° mag`)}
+                            title="Insert handrail navigation suggestion"
                         >
-                            <FontAwesomeIcon icon={faLightbulb} /> + Add handrail (ridge/stream)
+                            <FontAwesomeIcon icon={faLightbulb} /> + Handrail heading {compassDir}
                         </button>
                     )}
 
                     <button
                         type="button"
                         className="ems-chip ems-chip--action"
-                        onClick={() => insertChipText(`bearing ${String(leg.magnetic_bearing).padStart(3, '0')}° mag`)}
+                        onClick={() => insertChipText(`bearing ${String(leg.magnetic_bearing).padStart(3, '0')}° mag (${compassDir})`)}
                     >
                         + Insert {String(leg.magnetic_bearing).padStart(3, '0')}° mag
                     </button>
 
-                    <button
-                        type="button"
-                        className="ems-chip ems-chip--action"
-                        onClick={() => insertChipText(`to ${leg.end_name} (${leg.end_grid_ref})`)}
-                    >
-                        + Insert grid ref
-                    </button>
+                    {endGrid && (
+                        <button
+                            type="button"
+                            className="ems-chip ems-chip--action"
+                            onClick={() => insertChipText(`to ${endName} (${endGrid})`)}
+                        >
+                            + Insert destination grid ref
+                        </button>
+                    )}
                 </div>
 
                 <textarea
                     id={navDescId}
                     className="ems-textarea"
                     rows={isActive ? 3 : 2}
-                    value={leg.route_description || ''}
+                    value={desc}
                     onChange={(e) => handleTextChange('route_description', e.target.value)}
-                    placeholder="e.g. Follow the footpath NE alongside the stream (handrail) to the col, then bear 048° mag up the ridge towards the summit cairn."
+                    placeholder={`e.g. Follow the footpath ${compassDir} on bearing ${String(leg.magnetic_bearing).padStart(3, '0')}° mag towards ${endName}.`}
                 />
             </div>
 
@@ -249,7 +292,7 @@ export function RouteLegCard({
             <div className="ems-leg-split-inputs" onClick={(e) => e.stopPropagation()}>
                 <div className="ems-leg-input-block ems-leg-input-block--half">
                     <label htmlFor={activityNotesId} className="ems-field-label">
-                        <FontAwesomeIcon icon={faCoffee} /> At Destination Checkpoint ({leg.end_name})
+                        <FontAwesomeIcon icon={faCoffee} /> At Destination Checkpoint ({endName})
                     </label>
                     <div className="ems-rest-controls">
                         <label htmlFor={restMinsId} className="screen-reader-text">Rest Duration (Minutes)</label>
@@ -292,7 +335,7 @@ export function RouteLegCard({
                         rows={2}
                         value={leg.escape_route || ''}
                         onChange={(e) => handleTextChange('escape_route', e.target.value)}
-                        placeholder="e.g. In severe weather or injury: Retrace steps SW down spur to Bothy."
+                        placeholder={`e.g. In severe weather or injury: Retrace steps back to ${startName}.`}
                     />
                 </div>
             </div>

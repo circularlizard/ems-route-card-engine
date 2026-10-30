@@ -601,6 +601,7 @@ export function RouteCardBuilder({
                                 <RouteLegCard
                                     key={leg.leg_number}
                                     leg={leg}
+                                    vertices={vertices}
                                     isActive={idx === activeLegIndex}
                                     isLastLeg={idx === legs.length - 1}
                                     onSelect={() => setActiveLegIndex(idx)}
