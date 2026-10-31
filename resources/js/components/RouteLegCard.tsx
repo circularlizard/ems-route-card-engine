@@ -207,7 +207,7 @@ export function RouteLegCard({
 
                     <textarea
                         id={navDescId}
-                        className="ems-textarea"
+                        className="ems-textarea ems-auto-expand"
                         rows={2}
                         value={desc}
                         onChange={(e) => handleTextChange('route_description', e.target.value)}
@@ -221,10 +221,10 @@ export function RouteLegCard({
                         <label htmlFor={escapeRouteId} className="ems-field-label">
                             Escape Route
                         </label>
-                        <input
+                        <textarea
                             id={escapeRouteId}
-                            type="text"
-                            className="ems-input-text"
+                            rows={1}
+                            className="ems-auto-expand"
                             value={leg.escape_route || ''}
                             onChange={(e) => handleTextChange('escape_route', e.target.value)}
                             placeholder="Emergency egress / valley route in bad weather..."
@@ -270,10 +270,10 @@ export function RouteLegCard({
                         <label htmlFor={activityNotesId} className="ems-field-label">
                             Project Activity
                         </label>
-                        <input
+                        <textarea
                             id={activityNotesId}
-                            type="text"
-                            className="ems-input-text"
+                            rows={1}
+                            className="ems-auto-expand"
                             value={leg.activity_notes || ''}
                             onChange={(e) => handleTextChange('activity_notes', e.target.value)}
                             placeholder="Expedition aim / team project observation..."

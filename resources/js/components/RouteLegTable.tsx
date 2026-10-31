@@ -41,18 +41,18 @@ export function RouteLegTable({
             <table className="ems-route-table">
                 <thead>
                     <tr>
-                        <th style={{ width: '40px' }}>#</th>
-                        <th>From (Origin)</th>
-                        <th>To (Destination)</th>
-                        <th style={{ width: '70px' }}>Dist (km)</th>
-                        <th style={{ width: '70px' }}>Climb (m)</th>
-                        <th style={{ width: '80px' }}>Walk Time</th>
-                        <th style={{ width: '105px' }}>Project & Rest</th>
-                        <th style={{ width: '80px' }}>Total</th>
-                        <th>Navigation Description</th>
-                        <th>Project Activity</th>
-                        <th>Escape Route</th>
-                        <th style={{ width: '75px' }}>Actions</th>
+                        <th style={{ width: '36px' }}>#</th>
+                        <th style={{ minWidth: '120px' }}>From (Origin)</th>
+                        <th style={{ minWidth: '120px' }}>To (Destination)</th>
+                        <th style={{ width: '65px' }}>Dist (km)</th>
+                        <th style={{ width: '65px' }}>Climb (m)</th>
+                        <th style={{ width: '75px' }}>Walk Time</th>
+                        <th style={{ width: '95px' }}>Rest (min)</th>
+                        <th style={{ width: '75px' }}>Total</th>
+                        <th style={{ minWidth: '220px' }}>Navigation Description</th>
+                        <th style={{ minWidth: '140px' }}>Project Activity</th>
+                        <th style={{ minWidth: '140px' }}>Escape Route</th>
+                        <th style={{ width: '70px' }}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -104,8 +104,8 @@ export function RouteLegTable({
                                 </td>
                                 <td>
                                     <textarea
-                                        rows={2}
-                                        className="ems-table-textarea"
+                                        rows={1}
+                                        className="ems-auto-expand ems-table-textarea"
                                         value={leg.route_description || ''}
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleTextChange(idx, 'route_description', e.target.value)}
@@ -114,8 +114,8 @@ export function RouteLegTable({
                                 </td>
                                 <td>
                                     <textarea
-                                        rows={2}
-                                        className="ems-table-textarea"
+                                        rows={1}
+                                        className="ems-auto-expand ems-table-textarea"
                                         value={leg.activity_notes || ''}
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleTextChange(idx, 'activity_notes', e.target.value)}
@@ -124,8 +124,8 @@ export function RouteLegTable({
                                 </td>
                                 <td>
                                     <textarea
-                                        rows={2}
-                                        className="ems-table-textarea"
+                                        rows={1}
+                                        className="ems-auto-expand ems-table-textarea"
                                         value={leg.escape_route || ''}
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleTextChange(idx, 'escape_route', e.target.value)}
