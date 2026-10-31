@@ -240,7 +240,7 @@ export function RouteLegCard({
                         {leg.leg_number}
                     </span>
 
-                    <div className="ems-waypoint-col">
+                    <div className="ems-waypoint-col ems-waypoint-col--start">
                         <input
                             ref={startNameInputRef}
                             id={startNameId}
@@ -258,9 +258,12 @@ export function RouteLegCard({
                         )}
                     </div>
 
-                    <span className="ems-vector-arrow" aria-hidden="true">→</span>
+                    <span className="ems-vector-arrow" aria-hidden="true">
+                        <span className="ems-desktop-arrow">→</span>
+                        <span className="ems-mobile-arrow">↳</span>
+                    </span>
 
-                    <div className="ems-waypoint-col">
+                    <div className="ems-waypoint-col ems-waypoint-col--end">
                         <input
                             ref={endNameInputRef}
                             id={endNameId}

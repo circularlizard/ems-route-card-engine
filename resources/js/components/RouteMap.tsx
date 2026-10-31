@@ -350,6 +350,12 @@ export function RouteMap({
 
                 const handleActiveLineMouseMove = (e: L.LeafletMouseEvent) => {
                     if (!activeLeg || vertices.length < 2 || isDraggingRef.current) return;
+
+                    // Disable passive hover Ghost Bead on touch devices
+                    if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                        return;
+                    }
+
                     const snapped = findNearestTrackPointIndex(
                         vertices,
                         e.latlng,
@@ -359,12 +365,26 @@ export function RouteMap({
                         100
                     );
                     if (snapped !== null && vertices[snapped]) {
-                        currentSnappedVertexRef.current = snapped;
                         const v = vertices[snapped];
                         const vStart = vertices[activeLeg.start_vertex_index];
                         const vEnd = vertices[activeLeg.end_vertex_index];
-                        const dist1 = ((v.dist_from_start_m - vStart.dist_from_start_m) / 1000).toFixed(2);
-                        const dist2 = ((vEnd.dist_from_start_m - v.dist_from_start_m) / 1000).toFixed(2);
+                        const d1 = (v.dist_from_start_m - vStart.dist_from_start_m) / 1000;
+                        const d2 = (vEnd.dist_from_start_m - v.dist_from_start_m) / 1000;
+
+                        // Strict minimum distance guard: minimum 0.15km from both start and end checkpoints
+                        if (d1 < 0.15 || d2 < 0.15) {
+                            if (ghostMarkerRef.current) {
+                                group.removeLayer(ghostMarkerRef.current);
+                                ghostMarkerRef.current = null;
+                            }
+                            currentSnappedVertexRef.current = null;
+                            callbacksRef.current.onGhostHoverVertex?.(null);
+                            return;
+                        }
+
+                        currentSnappedVertexRef.current = snapped;
+                        const dist1 = d1.toFixed(2);
+                        const dist2 = d2.toFixed(2);
                         const tooltipHtml = `<b>+ Click to split leg</b> • ${dist1} km | ${dist2} km<br/><span style="color:#64748b">${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</span>`;
 
                         if (!ghostMarkerRef.current) {
@@ -419,7 +439,18 @@ export function RouteMap({
                         5,
                         100
                     );
-                    if (targetIdx !== null) {
+                    if (targetIdx !== null && vertices[targetIdx]) {
+                        const v = vertices[targetIdx];
+                        const vStart = vertices[activeLeg.start_vertex_index];
+                        const vEnd = vertices[activeLeg.end_vertex_index];
+                        if (vStart && vEnd) {
+                            const d1 = (v.dist_from_start_m - vStart.dist_from_start_m) / 1000;
+                            const d2 = (vEnd.dist_from_start_m - v.dist_from_start_m) / 1000;
+                            if (d1 < 0.15 || d2 < 0.15) {
+                                return;
+                            }
+                        }
+
                         if (ghostMarkerRef.current) {
                             group.removeLayer(ghostMarkerRef.current);
                             ghostMarkerRef.current = null;
@@ -783,48 +814,65 @@ export function RouteMap({
             {/* Map Top Bar Controls */}
             <div className="ems-route-map__toolbar">
                 <div className="ems-route-map__layer-select" role="group" aria-label="Map Tile Layer">
-                    <button
-                        type="button"
-                        className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
-                        onClick={() => setBaseLayer('opentopo')}
-                        title="Topographic Contours (OpenTopoMap)"
+                    {/* Compact Select Dropdown on Mobile */}
+                    <select
+                        className="ems-map-layer-dropdown"
+                        value={baseLayer}
+                        onChange={(e) => setBaseLayer(e.target.value as any)}
+                        aria-label="Select base map tile layer"
                     >
-                        OpenTopo
-                    </button>
-                    <button
-                        type="button"
-                        className={`ems-map-btn ${baseLayer === 'cyclosm' ? 'ems-map-btn--active' : ''}`}
-                        onClick={() => setBaseLayer('cyclosm')}
-                        title="Outdoor Topo with Contours & Trails (CyclOSM)"
-                    >
-                        CyclOSM Topo
-                    </button>
-                    <button
-                        type="button"
-                        className={`ems-map-btn ${baseLayer === 'esri' ? 'ems-map-btn--active' : ''}`}
-                        onClick={() => setBaseLayer('esri')}
-                        title="ESRI World Topo with Shaded Relief & Contours"
-                    >
-                        ESRI Topo
-                    </button>
-                    <button
-                        type="button"
-                        className={`ems-map-btn ${baseLayer === 'osm' ? 'ems-map-btn--active' : ''}`}
-                        onClick={() => setBaseLayer('osm')}
-                        title="Standard OpenStreetMap"
-                    >
-                        Street
-                    </button>
-                    {osMapsApiKey && (
+                        <option value="opentopo">OpenTopo</option>
+                        <option value="cyclosm">CyclOSM Topo</option>
+                        <option value="esri">ESRI Topo</option>
+                        <option value="osm">Street</option>
+                        {osMapsApiKey && <option value="os">OS Leisure</option>}
+                    </select>
+
+                    {/* Desktop Button Group */}
+                    <div className="ems-map-layer-buttons">
                         <button
                             type="button"
-                            className={`ems-map-btn ${baseLayer === 'os' ? 'ems-map-btn--active' : ''}`}
-                            onClick={() => setBaseLayer('os')}
-                            title="Official Ordnance Survey 1:25k Explorer / 1:50k Landranger"
+                            className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
+                            onClick={() => setBaseLayer('opentopo')}
+                            title="Topographic Contours (OpenTopoMap)"
                         >
-                            OS Leisure
+                            OpenTopo
                         </button>
-                    )}
+                        <button
+                            type="button"
+                            className={`ems-map-btn ${baseLayer === 'cyclosm' ? 'ems-map-btn--active' : ''}`}
+                            onClick={() => setBaseLayer('cyclosm')}
+                            title="Outdoor Topo with Contours & Trails (CyclOSM)"
+                        >
+                            CyclOSM Topo
+                        </button>
+                        <button
+                            type="button"
+                            className={`ems-map-btn ${baseLayer === 'esri' ? 'ems-map-btn--active' : ''}`}
+                            onClick={() => setBaseLayer('esri')}
+                            title="ESRI World Topo with Shaded Relief & Contours"
+                        >
+                            ESRI Topo
+                        </button>
+                        <button
+                            type="button"
+                            className={`ems-map-btn ${baseLayer === 'osm' ? 'ems-map-btn--active' : ''}`}
+                            onClick={() => setBaseLayer('osm')}
+                            title="Standard OpenStreetMap"
+                        >
+                            Street
+                        </button>
+                        {osMapsApiKey && (
+                            <button
+                                type="button"
+                                className={`ems-map-btn ${baseLayer === 'os' ? 'ems-map-btn--active' : ''}`}
+                                onClick={() => setBaseLayer('os')}
+                                title="Official Ordnance Survey 1:25k Explorer / 1:50k Landranger"
+                            >
+                                OS Leisure
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="ems-route-map__actions">
@@ -859,9 +907,12 @@ export function RouteMap({
                 className="ems-route-map-canvas"
             />
 
-            {/* Subtle Map Interaction Hint */}
-            <div className="ems-map-interaction-hint">
+            {/* Subtle Map Interaction Hint: Mouse desktop tip vs. Touch device tip */}
+            <div className="ems-map-interaction-hint ems-hide-touch">
                 Tip: Hover active leg on map to split (+) &bull; Drag checkpoints to move &bull; Right-click checkpoint to delete
+            </div>
+            <div className="ems-map-interaction-hint ems-show-touch">
+                Tip: Drag checkpoints to reposition &bull; Tap a leg to select
             </div>
         </div>
     );

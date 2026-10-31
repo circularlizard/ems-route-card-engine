@@ -121,6 +121,7 @@ export function RouteCardBuilder({
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [isMobileStatsExpanded, setIsMobileStatsExpanded] = useState(false);
 
     // Auto-dismiss status toast after 3 seconds
     useEffect(() => {
@@ -493,18 +494,20 @@ export function RouteCardBuilder({
                 {/* Top Toolbar */}
                 <div className="ems-builder-toolbar">
                     <div className="ems-builder-title-group">
-                        <label htmlFor={routeTitleId} className="screen-reader-text">Route Title</label>
-                        <input
-                            id={routeTitleId}
-                            type="text"
-                            className="ems-route-title-input"
-                            value={routeTitle}
-                            onChange={(e) => updateActiveDay({ routeTitle: e.target.value })}
-                            placeholder="Route Title"
-                        />
-                        <span className={`ems-badge-status ems-badge-status--${cardStatus}`}>
-                            {cardStatus.toUpperCase()}
-                        </span>
+                        <div className="ems-builder-title-row">
+                            <label htmlFor={routeTitleId} className="screen-reader-text">Route Title</label>
+                            <input
+                                id={routeTitleId}
+                                type="text"
+                                className="ems-route-title-input"
+                                value={routeTitle}
+                                onChange={(e) => updateActiveDay({ routeTitle: e.target.value })}
+                                placeholder="Route Title"
+                            />
+                            <span className={`ems-badge-status ems-badge-status--${cardStatus}`}>
+                                {cardStatus.toUpperCase()}
+                            </span>
+                        </div>
 
                         {/* Multi-Day Navigation Segmented Control */}
                         <div className="ems-day-segmented-control" aria-label="Day selection">
@@ -577,25 +580,43 @@ export function RouteCardBuilder({
                 {/* Route Stats Summary Bar */}
                 {legs.length > 0 && (
                     <div className="ems-route-stats-bar ems-route-stats-bar--compact">
-                        <div className="ems-stat-pill">
-                            <span className="ems-stat-pill__label">Distance</span>
-                            <span className="ems-stat-pill__val">{totalDistanceKm} km</span>
+                        {/* Mobile 1-Line Collapsible Summary */}
+                        <div className="ems-mobile-stats-header">
+                            <span className="ems-mobile-stats-summary">
+                                {totalDistanceKm}km • +{totalAscentM}m • {formatHoursMins(totalExpeditionMins)}
+                            </span>
+                            <button
+                                type="button"
+                                className="ems-mobile-stats-toggle"
+                                onClick={() => setIsMobileStatsExpanded((prev) => !prev)}
+                                aria-expanded={isMobileStatsExpanded}
+                            >
+                                {isMobileStatsExpanded ? 'Hide Details ▴' : 'Stats ▾'}
+                            </button>
                         </div>
-                        <div className="ems-stat-pill">
-                            <span className="ems-stat-pill__label">Climb</span>
-                            <span className="ems-stat-pill__val">+{totalAscentM} m</span>
-                        </div>
-                        <div className="ems-stat-pill">
-                            <span className="ems-stat-pill__label">Walking</span>
-                            <span className="ems-stat-pill__val">{formatHoursMins(totalWalkingMins)}</span>
-                        </div>
-                        <div className="ems-stat-pill">
-                            <span className="ems-stat-pill__label">Project &amp; Rest</span>
-                            <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
-                        </div>
-                        <div className="ems-stat-pill ems-stat-pill--highlight">
-                            <span className="ems-stat-pill__label">Total Expedition</span>
-                            <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
+
+                        {/* Detailed Stats Pills */}
+                        <div className={`ems-stats-pills-group ${isMobileStatsExpanded ? 'ems-stats-pills-group--expanded' : ''}`}>
+                            <div className="ems-stat-pill">
+                                <span className="ems-stat-pill__label">Distance</span>
+                                <span className="ems-stat-pill__val">{totalDistanceKm} km</span>
+                            </div>
+                            <div className="ems-stat-pill">
+                                <span className="ems-stat-pill__label">Climb</span>
+                                <span className="ems-stat-pill__val">+{totalAscentM} m</span>
+                            </div>
+                            <div className="ems-stat-pill">
+                                <span className="ems-stat-pill__label">Walking</span>
+                                <span className="ems-stat-pill__val">{formatHoursMins(totalWalkingMins)}</span>
+                            </div>
+                            <div className="ems-stat-pill">
+                                <span className="ems-stat-pill__label">Project &amp; Rest</span>
+                                <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
+                            </div>
+                            <div className="ems-stat-pill ems-stat-pill--highlight">
+                                <span className="ems-stat-pill__label">Total Expedition</span>
+                                <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
+                            </div>
                         </div>
 
                         {/* View Switcher */}

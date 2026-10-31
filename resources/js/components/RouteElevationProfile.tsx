@@ -178,8 +178,18 @@ export function RouteElevationProfile({
                 5,
                 100
             );
-            if (snappedGhost !== null) {
-                onGhostHoverVertex?.(snappedGhost);
+            if (snappedGhost !== null && vertices[snappedGhost]) {
+                const vStart = vertices[currentActiveLeg.start_vertex_index];
+                const vEnd = vertices[currentActiveLeg.end_vertex_index];
+                const d1 = vStart ? (vertices[snappedGhost].dist_from_start_m - vStart.dist_from_start_m) / 1000 : 0;
+                const d2 = vEnd ? (vEnd.dist_from_start_m - vertices[snappedGhost].dist_from_start_m) / 1000 : 0;
+
+                // Strict minimum distance guard (0.15km from checkpoints)
+                if (d1 >= 0.15 && d2 >= 0.15) {
+                    onGhostHoverVertex?.(snappedGhost);
+                } else {
+                    onGhostHoverVertex?.(null);
+                }
             } else {
                 onGhostHoverVertex?.(null);
             }

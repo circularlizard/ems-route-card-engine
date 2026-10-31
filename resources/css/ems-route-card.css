@@ -12,6 +12,15 @@
     margin-top: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.ems-builder-container {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .ems-route-card-studio__header h2 {
@@ -530,6 +539,14 @@
     min-width: 260px;
 }
 
+.ems-builder-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
 .ems-route-title-input {
     font-size: 18px;
     font-weight: 700;
@@ -810,6 +827,17 @@
     font-size: 11px;
 }
 
+.ems-mobile-stats-header {
+    display: none;
+}
+
+.ems-stats-pills-group {
+    display: flex;
+    align-items: baseline;
+    gap: 6px 16px;
+    flex-wrap: wrap;
+}
+
 /* Split Layout */
 .ems-studio-split-layout {
     display: grid;
@@ -861,6 +889,16 @@
     align-items: center;
     gap: 2px;
     border: 1px solid #e2e8f0;
+}
+
+.ems-map-layer-dropdown {
+    display: none;
+}
+
+.ems-map-layer-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
 }
 
 .ems-map-btn {
@@ -1056,6 +1094,19 @@
     text-align: center;
     user-select: none;
     line-height: 1.4;
+}
+
+.ems-show-touch {
+    display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .ems-hide-touch {
+        display: none !important;
+    }
+    .ems-show-touch {
+        display: block !important;
+    }
 }
 
 /* Draggable elevation checkpoint marker line/circle */
@@ -1720,16 +1771,80 @@ textarea.ems-auto-expand::placeholder,
     margin-top: 2px;
 }
 
+.ems-mobile-arrow {
+    display: none;
+}
+
 @media (max-width: 640px) {
     .ems-leg-vector-row {
-        grid-template-columns: auto 1fr;
+        display: grid;
+        grid-template-columns: 24px 1fr;
+        grid-template-rows: auto auto;
+        column-gap: 8px;
+        row-gap: 8px;
+        align-items: start;
+    }
+    .ems-leg-number-badge {
+        grid-column: 1;
+        grid-row: 1;
+        margin-top: 3px;
+    }
+    .ems-waypoint-col--start {
+        grid-column: 2;
+        grid-row: 1;
+        width: 100%;
     }
     .ems-vector-arrow {
+        grid-column: 1;
+        grid-row: 2;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        line-height: 1;
+        color: #64748b;
+        margin-top: 6px;
+    }
+    .ems-desktop-arrow {
         display: none;
     }
+    .ems-mobile-arrow {
+        display: inline-block;
+        font-size: 15px;
+        font-weight: 700;
+        color: #64748b;
+    }
+    .ems-waypoint-col--end {
+        grid-column: 2;
+        grid-row: 2;
+        width: 100%;
+    }
     .ems-leg-bottom-row {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .ems-leg-input-block--escape {
+        width: 100%;
+    }
+    .ems-leg-input-block--rest {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .ems-leg-input-block--rest .ems-label-with-addon {
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
         gap: 8px;
+    }
+    .ems-leg-input-block--rest .ems-input-number {
+        width: 90px !important;
+        max-width: 90px !important;
+        flex-shrink: 0;
     }
 }
 
@@ -2097,6 +2212,170 @@ textarea.ems-auto-expand::placeholder,
 }
 
 @media (max-width: 768px) {
+    .ems-route-card-studio {
+        padding: 12px 10px;
+        border-radius: 6px;
+        margin-top: 10px;
+    }
+
+    .ems-builder-sticky-header {
+        position: static !important;
+        box-shadow: none !important;
+        padding-top: 4px;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+
+    .ems-builder-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+    }
+
+    .ems-builder-title-group {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .ems-builder-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .ems-route-title-input {
+        font-size: 16px;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .ems-day-segmented-control {
+        width: 100%;
+        overflow-x: auto;
+        display: flex;
+        -webkit-overflow-scrolling: touch;
+        padding: 3px;
+        box-sizing: border-box;
+    }
+
+    .ems-day-segment-btn {
+        flex: 1 0 auto;
+        text-align: center;
+        white-space: nowrap;
+        padding: 5px 10px;
+    }
+
+    .ems-builder-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .ems-builder-actions .ems-btn {
+        flex: 1 1 calc(50% - 6px);
+        justify-content: center;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .ems-builder-actions .ems-btn--subtle {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+    }
+
+    /* Compact 1-Line Collapsible Summary Stats Bar */
+    .ems-route-stats-bar.ems-route-stats-bar--compact {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+    }
+
+    .ems-mobile-stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .ems-mobile-stats-summary {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .ems-mobile-stats-toggle {
+        background: transparent;
+        border: none;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #2563eb;
+        cursor: pointer;
+        padding: 2px 4px;
+    }
+
+    .ems-stats-pills-group {
+        display: none;
+    }
+
+    .ems-stats-pills-group.ems-stats-pills-group--expanded {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .ems-stats-pills-group--expanded .ems-stat-pill {
+        border-right: none;
+        padding: 2px 0;
+    }
+
+    .ems-view-toggle {
+        width: 100%;
+        display: flex;
+        margin-left: 0;
+    }
+
+    .ems-view-toggle .ems-view-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 6px 8px;
+    }
+
+    /* Map Layer Switcher on Mobile */
+    .ems-map-layer-dropdown {
+        display: block;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        max-width: 130px;
+    }
+
+    .ems-map-layer-buttons {
+        display: none !important;
+    }
+
     .ems-route-map-canvas {
         height: 250px;
     }
@@ -2115,19 +2394,6 @@ textarea.ems-auto-expand::placeholder,
 
     .ems-hide-sm {
         display: none !important;
-    }
-
-    .ems-route-title-input {
-        font-size: 16px;
-    }
-
-    .ems-builder-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .ems-builder-actions {
-        justify-content: flex-end;
     }
 }
 
