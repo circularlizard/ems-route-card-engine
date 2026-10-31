@@ -1,17 +1,4 @@
-import { useId, useRef, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faMountain,
-    faClock,
-    faRoute,
-    faScissors,
-    faCodeMerge,
-    faShieldHalved,
-    faLightbulb,
-    faCheckCircle,
-    faTriangleExclamation,
-    faCoffee,
-} from '@fortawesome/free-solid-svg-icons';
+import { useId, useRef, useEffect, useState } from 'react';
 import { RouteLeg, RouteVertex } from '../types/route-card';
 import { formatHoursMins } from '../utils/route-calculations';
 
@@ -32,7 +19,7 @@ export function RouteLegCard({
     vertices,
     isActive,
     isLastLeg,
-    nextLegStartName,
+    nextLegStartName: _nextLegStartName,
     onSelect,
     onUpdateLeg,
     onSplitLeg,
@@ -49,7 +36,7 @@ export function RouteLegCard({
 
     const isFirstRenderRef = useRef(true);
 
-    // Auto-scroll active card into view when selected by user
+    // Auto-scroll active card into view when selected
     useEffect(() => {
         if (isFirstRenderRef.current) {
             isFirstRenderRef.current = false;
@@ -65,9 +52,7 @@ export function RouteLegCard({
     const vEnd = vertices && vertices[leg.end_vertex_index];
 
     const startName = leg.start_name || (leg as any).checkpoint_from || (leg.leg_number === 1 ? 'Start' : `Checkpoint ${leg.leg_number}`);
-    const resolvedEndName = !isLastLeg && nextLegStartName !== undefined
-        ? nextLegStartName
-        : (leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`));
+    const endName = leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`);
 
     const startGrid = leg.start_grid_ref || (leg as any).start_grid_ref_6 || vStart?.grid_ref_6 || '';
     const endGrid = leg.end_grid_ref || (leg as any).end_grid_ref_6 || vEnd?.grid_ref_6 || '';
@@ -90,15 +75,17 @@ export function RouteLegCard({
         qualityStatus = 'medium';
     }
 
-    // Project & rest time is unified into one number
     const projectRestMins = leg.rest_minutes || 0;
-    const totalLegMins = leg.walking_minutes + projectRestMins;
+
+    // Progressive disclosure state for optional project activity
+    const hasInitialActivity = Boolean(leg.activity_notes && leg.activity_notes.trim().length > 0);
+    const [showActivity, setShowActivity] = useState(hasInitialActivity || projectRestMins > 0);
 
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         const updatedLeg: any = {
             ...leg,
             start_name: field === 'start_name' ? value : startName,
-            end_name: field === 'end_name' ? value : resolvedEndName,
+            end_name: field === 'end_name' ? value : endName,
             start_grid_ref: startGrid,
             end_grid_ref: endGrid,
             start_elevation_m: startEle,
@@ -111,189 +98,188 @@ export function RouteLegCard({
         onUpdateLeg(updatedLeg as RouteLeg);
     };
 
+    // Stats formatting string
+    const climbDescentStr = leg.descent_m > 0
+        ? `+${Math.round(leg.ascent_m)}m / -${Math.round(leg.descent_m)}m`
+        : `+${Math.round(leg.ascent_m)}m`;
+
     return (
         <div
             ref={cardRef}
             className={`ems-leg-card ${isActive ? 'ems-leg-card--active' : ''}`}
             onClick={onSelect}
         >
-            {/* Line 1: Header with Leg Number in Top Left and Start / End Checkpoints */}
-            <div className="ems-leg-card__line-1">
-                <span className="ems-leg-number-badge" title={`Leg ${leg.leg_number}`}>
-                    {leg.leg_number}
-                </span>
+            {/* Header Area: Side-by-Side Vector + Flush Subtext + Inline Metadata Sub-bar */}
+            <div className="ems-leg-card__header">
+                {/* Horizontal Vector Row: [Badge] [FROM Input] [→] [TO Input] */}
+                <div className="ems-leg-vector-row" onClick={(e) => e.stopPropagation()}>
+                    <span className="ems-leg-number-badge" title={`Leg ${leg.leg_number}`}>
+                        {leg.leg_number}
+                    </span>
 
-                <div className="ems-leg-endpoints" onClick={(e) => e.stopPropagation()}>
-                    <div className="ems-endpoint">
-                        <span className="ems-endpoint-label">From:</span>
-                        <div className="ems-endpoint-col">
-                            <input
-                                id={startNameId}
-                                type="text"
-                                className="ems-endpoint-input"
-                                value={startName}
-                                onChange={(e) => handleTextChange('start_name', e.target.value)}
-                                placeholder="Start point"
-                                title="Edit start checkpoint name"
-                            />
-                            {startGrid && (
-                                <span className="ems-endpoint-meta">{startGrid} • {Math.round(startEle)}m</span>
-                            )}
-                        </div>
+                    <div className="ems-waypoint-col">
+                        <input
+                            id={startNameId}
+                            type="text"
+                            className="ems-waypoint-input ems-endpoint-input"
+                            value={startName}
+                            onChange={(e) => handleTextChange('start_name', e.target.value)}
+                            placeholder="Start point"
+                            title="Start waypoint name"
+                        />
+                        {startGrid && (
+                            <div className="ems-waypoint-subtext">
+                                {startGrid} • {Math.round(startEle)}m
+                            </div>
+                        )}
                     </div>
 
-                    <div className="ems-endpoint">
-                        <span className="ems-endpoint-label">To:</span>
-                        <div className="ems-endpoint-col">
-                            <input
-                                id={endNameId}
-                                type="text"
-                                className={`ems-endpoint-input ${!isLastLeg ? 'ems-endpoint-input--readonly' : ''}`}
-                                value={resolvedEndName}
-                                readOnly={!isLastLeg}
-                                tabIndex={!isLastLeg ? -1 : 0}
-                                onChange={(e) => handleTextChange('end_name', e.target.value)}
-                                placeholder="End point"
-                                title={!isLastLeg ? `Linked to start of Leg ${leg.leg_number + 1}` : 'Edit finish checkpoint name'}
-                            />
-                            {endGrid && (
-                                <span className="ems-endpoint-meta">{endGrid} • {Math.round(endEle)}m</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <span className="ems-vector-arrow" aria-hidden="true">→</span>
 
-            {/* Line 2: Split / Merge Controls */}
-            <div className="ems-leg-card__line-2" onClick={(e) => e.stopPropagation()}>
-                <div className="ems-leg-action-buttons">
-                    <button
-                        type="button"
-                        className="ems-leg-tool-btn"
-                        title="Split leg at midpoint"
-                        onClick={onSplitLeg}
-                    >
-                        <FontAwesomeIcon icon={faScissors} /> Split Leg
-                    </button>
-
-                    {!isLastLeg && (
-                        <button
-                            type="button"
-                            className="ems-leg-tool-btn"
-                            title="Merge with next leg"
-                            onClick={onMergeLeg}
-                        >
-                            <FontAwesomeIcon icon={faCodeMerge} /> Merge with Next Leg
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Line 3: Distance, Elevation and Time (No Bearing) */}
-            <div className="ems-leg-card__line-3 ems-leg-metrics">
-                <div className="ems-metric-item" title="Horizontal Distance">
-                    <FontAwesomeIcon icon={faRoute} className="ems-metric-icon" />
-                    <span><b>{leg.distance_km}</b> km</span>
-                </div>
-
-                <div className="ems-metric-item" title="Elevation Ascent">
-                    <FontAwesomeIcon icon={faMountain} className="ems-metric-icon" />
-                    <span><b>+{Math.round(leg.ascent_m)}m</b> climb</span>
-                    {leg.descent_m > 0 && (
-                        <span className="ems-metric-sub">(-{Math.round(leg.descent_m)}m)</span>
-                    )}
-                </div>
-
-                <div className="ems-metric-item" title="Walking Time & Total Leg Duration">
-                    <FontAwesomeIcon icon={faClock} className="ems-metric-icon" />
-                    <span><b>{formatHoursMins(leg.walking_minutes)}</b> walk</span>
-                    {projectRestMins > 0 && (
-                        <span className="ems-metric-total">
-                            ({formatHoursMins(totalLegMins)} total)
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {/* Line 4: Route Navigation Description */}
-            <div className="ems-leg-card__line-4 ems-leg-input-block" onClick={(e) => e.stopPropagation()}>
-                <div className="ems-input-label-row">
-                    <label htmlFor={navDescId} className="ems-field-label">
-                        Route Navigation Description
-                    </label>
-
-                    <div className={`ems-quality-badge ems-quality-badge--${qualityStatus}`}>
-                        {qualityStatus === 'good' && <FontAwesomeIcon icon={faCheckCircle} />}
-                        {qualityStatus === 'medium' && <FontAwesomeIcon icon={faLightbulb} />}
-                        {qualityStatus === 'poor' && <FontAwesomeIcon icon={faTriangleExclamation} />}
-                        <span>{qualityStatus === 'good' ? 'Detailed' : qualityStatus === 'medium' ? 'Basic' : 'Needs detail'}</span>
-                    </div>
-                </div>
-
-                <textarea
-                    id={navDescId}
-                    className="ems-textarea"
-                    rows={isActive ? 3 : 2}
-                    value={desc}
-                    onChange={(e) => handleTextChange('route_description', e.target.value)}
-                    placeholder="Describe paths, tracks, handrails, terrain features, and checkpoint arrival..."
-                />
-            </div>
-
-            {/* Line 5: Escape Route */}
-            <div className="ems-leg-card__line-5 ems-leg-input-block" onClick={(e) => e.stopPropagation()}>
-                <label htmlFor={escapeRouteId} className="ems-field-label">
-                    <FontAwesomeIcon icon={faShieldHalved} /> Escape Route
-                </label>
-                <textarea
-                    id={escapeRouteId}
-                    className="ems-textarea ems-textarea--sm"
-                    rows={2}
-                    value={leg.escape_route || ''}
-                    onChange={(e) => handleTextChange('escape_route', e.target.value)}
-                    placeholder="Emergency / escape route in severe weather or injury..."
-                />
-            </div>
-
-            {/* Line 6: Project & Rest Time (One Number) and Project Activity */}
-            <div className="ems-leg-card__line-6 ems-leg-project-row" onClick={(e) => e.stopPropagation()}>
-                <div className="ems-leg-input-block ems-leg-input-block--time">
-                    <label htmlFor={restMinsId} className="ems-field-label">
-                        <FontAwesomeIcon icon={faCoffee} /> Project & Rest
-                    </label>
-                    <div className="ems-time-inputs-group">
-                        <div className="ems-time-input-field">
-                            <input
-                                id={restMinsId}
-                                type="number"
-                                min="0"
-                                max="300"
-                                step="5"
-                                className="ems-input-number"
-                                value={projectRestMins}
-                                onChange={(e) => handleTextChange('rest_minutes', parseInt(e.target.value, 10) || 0)}
-                            />
-                            <span className="ems-unit">mins</span>
-                        </div>
-                        {projectRestMins > 0 && (
-                            <span className="ems-time-formatted">({formatHoursMins(projectRestMins)})</span>
+                    <div className="ems-waypoint-col">
+                        <input
+                            id={endNameId}
+                            type="text"
+                            className="ems-waypoint-input ems-endpoint-input"
+                            value={endName}
+                            onChange={(e) => handleTextChange('end_name', e.target.value)}
+                            placeholder="End point"
+                            title="End waypoint name"
+                        />
+                        {endGrid && (
+                            <div className="ems-waypoint-subtext">
+                                {endGrid} • {Math.round(endEle)}m
+                            </div>
                         )}
                     </div>
                 </div>
 
-                <div className="ems-leg-input-block ems-leg-input-block--activity">
-                    <label htmlFor={activityNotesId} className="ems-field-label">
-                        Project Activity
-                    </label>
+                {/* Inline Metadata & Action Sub-bar */}
+                <div className="ems-leg-subbar" onClick={(e) => e.stopPropagation()}>
+                    <div className="ems-leg-stats-inline">
+                        <span className="ems-stat-num"><b>{leg.distance_km}</b> km</span>
+                        <span className="ems-stat-sep">•</span>
+                        <span className="ems-stat-num">{climbDescentStr}</span>
+                        <span className="ems-stat-sep">•</span>
+                        <span className="ems-stat-num">{formatHoursMins(leg.walking_minutes)} walk</span>
+                    </div>
+
+                    <div className="ems-leg-ghost-actions">
+                        <button
+                            type="button"
+                            className="ems-ghost-link"
+                            title="Split leg at midpoint"
+                            onClick={onSplitLeg}
+                        >
+                            Split Leg
+                        </button>
+                        {!isLastLeg && (
+                            <>
+                                <span className="ems-ghost-sep">•</span>
+                                <button
+                                    type="button"
+                                    className="ems-ghost-link"
+                                    title="Merge with next leg"
+                                    onClick={onMergeLeg}
+                                >
+                                    Merge with Next
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Body Area */}
+            <div className="ems-leg-card__body">
+                {/* Route Navigation Description */}
+                <div className="ems-leg-input-block" onClick={(e) => e.stopPropagation()}>
+                    <div className="ems-input-label-row">
+                        <label htmlFor={navDescId} className="ems-field-label">
+                            Route Navigation Description
+                        </label>
+
+                        <div className={`ems-quality-dot ems-quality-dot--${qualityStatus}`}>
+                            <span className="ems-dot" aria-hidden="true">●</span>
+                            <span>{qualityStatus === 'good' ? 'Detailed' : qualityStatus === 'medium' ? 'Basic' : 'Needs detail'}</span>
+                        </div>
+                    </div>
+
                     <textarea
-                        id={activityNotesId}
-                        className="ems-textarea ems-textarea--sm"
+                        id={navDescId}
+                        className="ems-textarea"
                         rows={2}
-                        value={leg.activity_notes || ''}
-                        onChange={(e) => handleTextChange('activity_notes', e.target.value)}
-                        placeholder="Expedition project or aim activity (e.g. survey, photo record, water testing)..."
+                        value={desc}
+                        onChange={(e) => handleTextChange('route_description', e.target.value)}
+                        placeholder="Describe paths, tracks, handrails, terrain features, col crossings, and checkpoint arrival..."
                     />
                 </div>
+
+                {/* 2-Column Grid: Escape Route + Rest (mins) */}
+                <div className="ems-leg-bottom-row" onClick={(e) => e.stopPropagation()}>
+                    <div className="ems-leg-input-block ems-leg-input-block--escape">
+                        <label htmlFor={escapeRouteId} className="ems-field-label">
+                            Escape Route
+                        </label>
+                        <input
+                            id={escapeRouteId}
+                            type="text"
+                            className="ems-input-text"
+                            value={leg.escape_route || ''}
+                            onChange={(e) => handleTextChange('escape_route', e.target.value)}
+                            placeholder="Emergency egress / valley route in bad weather..."
+                        />
+                    </div>
+
+                    <div className="ems-leg-input-block ems-leg-input-block--rest">
+                        <div className="ems-label-with-addon">
+                            <label htmlFor={restMinsId} className="ems-field-label">
+                                Rest (mins)
+                            </label>
+                            {!showActivity && projectRestMins === 0 && (
+                                <button
+                                    type="button"
+                                    className="ems-add-activity-btn"
+                                    onClick={() => setShowActivity(true)}
+                                    title="Add expedition project or aim activity"
+                                >
+                                    + Project
+                                </button>
+                            )}
+                        </div>
+                        <input
+                            id={restMinsId}
+                            type="number"
+                            min="0"
+                            max="300"
+                            step="5"
+                            className="ems-input-number"
+                            value={projectRestMins}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value, 10) || 0;
+                                handleTextChange('rest_minutes', val);
+                                if (val > 0) setShowActivity(true);
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* Conditional Project Activity Field */}
+                {(showActivity || projectRestMins > 0 || Boolean(leg.activity_notes && leg.activity_notes.trim().length > 0)) && (
+                    <div className="ems-leg-input-block ems-leg-input-block--activity" onClick={(e) => e.stopPropagation()}>
+                        <label htmlFor={activityNotesId} className="ems-field-label">
+                            Project Activity
+                        </label>
+                        <input
+                            id={activityNotesId}
+                            type="text"
+                            className="ems-input-text"
+                            value={leg.activity_notes || ''}
+                            onChange={(e) => handleTextChange('activity_notes', e.target.value)}
+                            placeholder="Expedition aim / team project observation..."
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

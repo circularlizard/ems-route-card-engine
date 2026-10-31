@@ -29,15 +29,14 @@ const mockLeg1: RouteLeg = {
     escape_route: 'Return along valley floor',
 };
 
-describe('RouteLegCard Checkpoint Linking & ReadOnly Behavior', () => {
-    it('renders "From" as editable and "To" as read-only for intermediate legs', () => {
+describe('RouteLegCard Checkpoint Vector & Editing Behavior', () => {
+    it('renders "From" and "To" as editable inputs with leg badge and monospace subtext', () => {
         const onUpdateLeg = vi.fn();
         render(
             <RouteLegCard
                 leg={mockLeg1}
                 isActive={true}
                 isLastLeg={false}
-                nextLegStartName="High Pass"
                 onSelect={vi.fn()}
                 onUpdateLeg={onUpdateLeg}
                 onSplitLeg={vi.fn()}
@@ -53,20 +52,23 @@ describe('RouteLegCard Checkpoint Linking & ReadOnly Behavior', () => {
         expect(fromInput.readOnly).toBe(false);
         expect(fromInput.value).toBe('Trailhead');
 
-        // Check "To" input is read-only for intermediate leg
+        // Check "To" input is editable for waypoint sync
         const toInput = screen.getByPlaceholderText('End point') as HTMLInputElement;
-        expect(toInput.readOnly).toBe(true);
+        expect(toInput.readOnly).toBe(false);
         expect(toInput.value).toBe('High Pass');
-        expect(toInput).toHaveClass('ems-endpoint-input--readonly');
+
+        // Check monospace grid ref and elevation subtext are rendered
+        expect(screen.getByText(/NN 123 456 • 100m/i)).toBeInTheDocument();
+        expect(screen.getByText(/NN 140 470 • 500m/i)).toBeInTheDocument();
     });
 
-    it('renders "To" as fully editable on the last leg', () => {
+    it('renders "To" and fires onUpdateLeg with new end_name when edited', () => {
         const onUpdateLeg = vi.fn();
         render(
             <RouteLegCard
                 leg={mockLeg1}
                 isActive={false}
-                isLastLeg={true}
+                isLastLeg={false}
                 onSelect={vi.fn()}
                 onUpdateLeg={onUpdateLeg}
                 onSplitLeg={vi.fn()}
@@ -74,13 +76,8 @@ describe('RouteLegCard Checkpoint Linking & ReadOnly Behavior', () => {
             />
         );
 
-        // Both inputs should be editable on the final leg
-        const fromInput = screen.getByPlaceholderText('Start point') as HTMLInputElement;
         const toInput = screen.getByPlaceholderText('End point') as HTMLInputElement;
-
-        expect(fromInput.readOnly).toBe(false);
         expect(toInput.readOnly).toBe(false);
-        expect(toInput).not.toHaveClass('ems-endpoint-input--readonly');
 
         // Editing "To" fires onUpdateLeg with new end_name
         fireEvent.change(toInput, { target: { value: 'Campsite B' } });

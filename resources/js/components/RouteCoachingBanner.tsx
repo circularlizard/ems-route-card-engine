@@ -27,9 +27,10 @@ export function RouteCoachingBanner({
     totalProjectMinutes = 0,
     dofeLevel = 'silver',
 }: RouteCoachingBannerProps) {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
 
     const issues: { type: 'warning' | 'info'; message: string; icon: typeof faTriangleExclamation }[] = [];
+    const summarySnippets: string[] = [];
 
     // 1. Minimum DofE Expedition Hours
     const totalExpMins = totalWalkingMinutes + totalRestMinutes + totalProjectMinutes;
@@ -42,6 +43,7 @@ export function RouteCoachingBanner({
             icon: faClock,
             message: `Total expedition time is ${formatHoursMins(totalExpMins)} (${totalExpHours.toFixed(1)} hrs). DofE ${dofeLevel.toUpperCase()} requires a minimum of ${minHours} hours planned activity per day.`,
         });
+        summarySnippets.push(`Under ${minHours}h planned time`);
     }
 
     // 2. Long legs without checkpoints (> 3.5km)
@@ -52,6 +54,7 @@ export function RouteCoachingBanner({
             icon: faRoute,
             message: `${longLegs.length} leg(s) exceed 3.5 km without an intermediate checkpoint (e.g. Leg ${longLegs.map((l) => l.leg_number).join(', ')}). Consider adding a split point at a col or river crossing.`,
         });
+        summarySnippets.push(`${longLegs.length} leg(s) > 3.5km`);
     }
 
     // 3. Missing descriptions or escape routes
@@ -62,6 +65,7 @@ export function RouteCoachingBanner({
             icon: faTriangleExclamation,
             message: `${missingDesc.length} leg(s) have brief or missing route navigation descriptions.`,
         });
+        summarySnippets.push(`${missingDesc.length} leg(s) missing detail`);
     }
 
     const missingEscape = legs.filter((l) => !l.escape_route || l.escape_route.trim().length < 5);
@@ -71,28 +75,43 @@ export function RouteCoachingBanner({
             icon: faShieldHalved,
             message: `${missingEscape.length} leg(s) are missing safety and escape route instructions.`,
         });
+        summarySnippets.push(`${missingEscape.length} missing escape`);
     }
 
     if (issues.length === 0) {
         return (
             <div className="ems-coaching-banner ems-coaching-banner--success">
-                <FontAwesomeIcon icon={faCheckCircle} className="ems-coaching-banner__icon" />
-                <div className="ems-coaching-banner__content">
-                    <b>All pre-flight route checks pass!</b> Your route card is ready for leader review.
+                <div className="ems-coaching-banner__summary">
+                    <FontAwesomeIcon icon={faCheckCircle} className="ems-coaching-banner__icon" />
+                    <span><b>Pre-Flight Checks Passed:</b> Route card meets minimum DofE requirements.</span>
                 </div>
             </div>
         );
     }
 
+    const summaryLine = summarySnippets.join(', ');
+
     return (
         <div className="ems-coaching-banner ems-coaching-banner--warning">
-            <div className="ems-coaching-banner__header" onClick={() => setIsCollapsed(!isCollapsed)}>
+            <div className="ems-coaching-banner__summary" onClick={() => setIsCollapsed(!isCollapsed)}>
                 <div className="ems-coaching-banner__title">
                     <FontAwesomeIcon icon={faTriangleExclamation} className="ems-coaching-banner__icon" />
-                    <span><b>Pre-Flight Coaching ({issues.length} feedback items)</b></span>
+                    <span className="ems-coaching-banner__text">
+                        <b>{issues.length} Route Check{issues.length > 1 ? 's' : ''}</b>
+                        {summaryLine ? ` — ${summaryLine}` : ''}
+                    </span>
                 </div>
-                <button type="button" className="ems-btn-icon">
-                    <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} />
+                <button
+                    type="button"
+                    className="ems-coaching-banner__toggle-btn"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsCollapsed(!isCollapsed);
+                    }}
+                    aria-expanded={!isCollapsed}
+                >
+                    {isCollapsed ? 'Show Details' : 'Hide Details'}
+                    <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} className="ems-toggle-icon" />
                 </button>
             </div>
 

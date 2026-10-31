@@ -59,11 +59,10 @@ describe('RouteCardStudio', () => {
         }));
     });
 
-    it('renders studio heading, Route Card Studio tab, and Day 1 tabs', async () => {
+    it('renders Route Card Studio tab, and Day 1 tabs', async () => {
         render(<RouteCardStudio />);
 
-        expect(screen.getByText(/DofE Route Card Studio & Terrain Engine/i)).toBeInTheDocument();
-        expect(screen.getByText(/Route Card Studio & Sandbox/i)).toBeInTheDocument();
+        expect(screen.getByText(/Route Card Studio & Analysis/i)).toBeInTheDocument();
         expect(screen.getByText(/Local DEM Tile Manager/i)).toBeInTheDocument();
         expect(screen.getByText(/Map & API Settings/i)).toBeInTheDocument();
 
@@ -87,9 +86,9 @@ describe('RouteCardStudio', () => {
             expect(screen.getByText('Fort William & Ben Nevis')).toBeInTheDocument();
         });
 
-        // Switch back to Sandbox
-        const sandboxTab = screen.getByText(/Route Card Studio & Sandbox/i);
-        fireEvent.click(sandboxTab);
+        // Switch back to Studio
+        const studioTab = screen.getByText(/Route Card Studio & Analysis/i);
+        fireEvent.click(studioTab);
 
         expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
     });

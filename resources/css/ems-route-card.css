@@ -366,49 +366,90 @@
    Phase 5: Route Card Studio & Mobile UX Styles
    ========================================================================== */
 
-/* Day Stepper Tabs */
-.ems-day-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 8px;
-    overflow-x: auto;
+/* Day Stepper Segmented Control */
+.ems-day-segmented-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 6px;
+    margin-bottom: 16px;
 }
 
-.ems-day-tab {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 8px 18px;
+.ems-day-segment-btn {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
     font-size: 13px;
-    font-weight: 600;
-    color: #475569;
+    font-weight: 500;
+    color: #64748b;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.ems-day-tab:hover {
-    background: #e2e8f0;
+.ems-day-segment-btn:hover {
     color: #0f172a;
 }
 
-.ems-day-tab--active {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #ffffff;
+.ems-day-segment-btn--active {
+    background: #ffffff;
+    color: #0f172a;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.ems-tab-icon {
-    margin-right: 6px;
-    font-size: 13px;
-}
-
-.ems-day-tab-dist {
+.ems-day-segment-dist {
     font-size: 11px;
-    opacity: 0.85;
-    margin-left: 4px;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+}
+
+.ems-day-segment-btn--active .ems-day-segment-dist {
+    color: #475569;
+}
+
+/* Toast Notifications */
+.ems-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: ems-toast-fadein 0.2s ease-out;
+}
+
+@keyframes ems-toast-fadein {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ems-toast--success {
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #334155;
+}
+
+.ems-toast--error {
+    background: #ef4444;
+    color: #ffffff;
 }
 
 .ems-loading-state {
@@ -483,12 +524,12 @@
 }
 
 .ems-route-title-input {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 6px 10px;
+    border-radius: 4px;
+    padding: 4px 8px;
     background: transparent;
     width: 100%;
     max-width: 450px;
@@ -500,15 +541,20 @@
     border-color: #cbd5e1;
     background: #ffffff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    outline: none;
 }
 
 .ems-badge-status {
     font-size: 11px;
-    font-weight: 700;
-    padding: 4px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
+    border: none;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
 }
 
 .ems-badge-status--draft {
@@ -760,7 +806,7 @@
 /* Split Layout */
 .ems-studio-split-layout {
     display: grid;
-    grid-template-columns: 52% 48%;
+    grid-template-columns: 50% 50%;
     gap: 20px;
     align-items: start;
 }
@@ -772,7 +818,9 @@
 
 .ems-studio-pane--map {
     position: sticky;
-    top: calc(var(--ems-sticky-top-offset, 32px) + var(--ems-sticky-header-height, 98px) + 16px);
+    top: calc(var(--ems-sticky-top-offset, 32px) + var(--ems-sticky-header-height, 98px) + 12px);
+    max-height: calc(100vh - var(--ems-sticky-top-offset, 32px) - var(--ems-sticky-header-height, 98px) - 24px);
+    overflow-y: auto;
     align-self: start;
     z-index: 10;
 }
@@ -799,34 +847,37 @@
 }
 
 .ems-route-map__layer-select {
-    display: flex;
+    background: #f1f5f9;
+    padding: 2px;
+    border-radius: 6px;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-}
-
-.ems-map-btn-icon {
-    color: #64748b;
-    margin-right: 4px;
-    font-size: 12px;
+    gap: 2px;
+    border: 1px solid #e2e8f0;
 }
 
 .ems-map-btn {
-    background: none;
-    border: 1px solid transparent;
-    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    padding: 3px 8px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
-    color: #475569;
+    color: #64748b;
     cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ems-map-btn:hover {
+    color: #0f172a;
 }
 
 .ems-map-btn--active {
     background: #ffffff;
-    border-color: #cbd5e1;
-    color: #2563eb;
+    color: #0f172a;
     font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .ems-route-map__actions {
@@ -939,544 +990,435 @@
 /* Single Leg Card */
 .ems-leg-card {
     background: #ffffff;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 16px;
+    padding: 0;
+    overflow: hidden;
     transition: all 0.15s ease-in-out;
-    border-left: 4px solid #94a3b8;
+    border-left: 3px solid #cbd5e1;
     cursor: pointer;
     scroll-margin-top: calc(var(--ems-sticky-top-offset, 32px) + var(--ems-sticky-header-height, 98px) + 20px);
     scroll-margin-bottom: 20px;
 }
 
 .ems-leg-card:hover {
-    border-color: #94a3b8;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .ems-leg-card--active {
     border-left-color: #2563eb;
     border-color: #93c5fd;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
 }
 
-/* Line 1: Header with Leg Number and Origin Checkpoints */
-.ems-leg-card__line-1 {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-    transition: all 0.15s ease-in-out;
+/* Card Header: Flattened FROM -> TO Vector & Inline Subbar */
+.ems-leg-card__header {
+    padding: 10px 12px 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
 }
 
-.ems-leg-card--active .ems-leg-card__line-1 {
-    background: #eef2ff;
-    border-color: #cbd5e1;
+.ems-leg-card--active .ems-leg-card__header {
+    background: #fafbfe;
+}
+
+.ems-leg-vector-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr;
+    gap: 8px;
+    align-items: start;
 }
 
 .ems-leg-number-badge {
     background: #2563eb;
     color: #ffffff;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
-    margin-top: 3px;
+    margin-top: 2px;
 }
 
-.ems-leg-endpoints {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    flex: 1;
-    min-width: 0;
-}
-
-.ems-endpoint {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-}
-
-.ems-endpoint-col {
+.ems-waypoint-col {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    flex: 1;
     min-width: 0;
 }
 
-.ems-endpoint-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    margin-top: 5px;
-    flex-shrink: 0;
-}
-
-.ems-endpoint-input {
+.ems-waypoint-input {
     font-size: 13px;
     font-weight: 600;
     color: #0f172a;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     background: #ffffff;
     transition: all 0.15s ease-in-out;
     width: 100%;
     box-sizing: border-box;
 }
 
-.ems-endpoint-input:hover:not(:read-only) {
+.ems-waypoint-input:hover {
     border-color: #94a3b8;
 }
 
-.ems-endpoint-input:focus {
+.ems-waypoint-input:focus {
     border-color: #2563eb;
-    background: #ffffff;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-.ems-endpoint-input--readonly,
-.ems-endpoint-input:read-only {
-    background: #f8fafc;
-    border-color: #e2e8f0;
+.ems-waypoint-subtext {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
     color: #64748b;
-    cursor: default;
+    margin-top: 3px;
+    padding-left: 2px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
 }
 
-.ems-endpoint-meta {
-    display: inline-flex;
+.ems-vector-arrow {
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+    align-self: center;
+    padding-bottom: 16px;
+    user-select: none;
+}
+
+/* Inline Metadata & Action Subbar */
+.ems-leg-subbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    padding-top: 4px;
+}
+
+.ems-leg-stats-inline {
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    display: flex;
     align-items: center;
     gap: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ems-stat-num {
+    font-variant-numeric: tabular-nums;
+}
+
+.ems-stat-sep {
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+.ems-leg-ghost-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ems-ghost-link {
+    background: none;
+    border: none;
+    padding: 0;
     font-size: 11px;
-    font-weight: 700;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    color: #0f172a;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 2px 7px;
-    margin-top: 4px;
-    width: fit-content;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    text-decoration: none;
 }
 
-.ems-leg-card--active .ems-endpoint-meta {
-    background: #ffffff;
-    color: #1e40af;
-    border-color: #93c5fd;
-    font-weight: 700;
+.ems-ghost-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
 }
 
-@media (max-width: 640px) {
-    .ems-leg-endpoints {
-        flex-direction: column;
-        gap: 10px;
-    }
+.ems-ghost-sep {
+    color: #cbd5e1;
+    font-size: 10px;
 }
 
-/* Line 2: Split / Merge Controls */
-.ems-leg-card__line-2 {
+/* Card Body */
+.ems-leg-card__body {
+    padding: 8px 12px 10px 12px;
     display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.ems-leg-action-buttons {
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
 }
 
-.ems-leg-tool-btn {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 3px 8px;
+/* Standardized Form Field Labels */
+.ems-field-label {
     font-size: 11px;
     font-weight: 600;
-    color: #334155;
-    cursor: pointer;
-    display: inline-flex;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    display: flex;
     align-items: center;
     gap: 5px;
-    transition: all 0.15s ease-in-out;
-}
-
-.ems-leg-tool-btn:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #0f172a;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-/* Line 3: Prominent Route Properties (Distance, Elevation Ascent & Walking Time) */
-.ems-leg-card__line-3.ems-leg-metrics {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 8px 14px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.ems-leg-card--active .ems-leg-card__line-3.ems-leg-metrics {
-    background: #f8fafc;
-    border-color: #93c5fd;
-    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
-}
-
-.ems-metric-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: #1e293b;
-}
-
-.ems-metric-item b {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.ems-metric-icon {
-    font-size: 13px;
-}
-
-/* Distinct color-coded icons for prominent route properties */
-.ems-metric-item:nth-child(1) .ems-metric-icon {
-    color: #2563eb; /* Vibrant Blue for Distance */
-}
-
-.ems-metric-item:nth-child(2) .ems-metric-icon {
-    color: #d97706; /* Amber for Mountain Elevation */
-}
-
-.ems-metric-item:nth-child(3) .ems-metric-icon {
-    color: #7c3aed; /* Purple for Walking Time */
-}
-
-.ems-metric-sub {
-    font-size: 11px;
-    color: #64748b;
-    margin-left: 2px;
-    font-weight: 500;
-}
-
-.ems-metric-total {
-    font-size: 11px;
-    color: #1e40af;
-    font-weight: 700;
-    margin-left: 4px;
-    background: #eff6ff;
-    padding: 1px 6px;
-    border-radius: 4px;
-    border: 1px solid #bfdbfe;
-}
-
-/* Line 6: Project & Rest Row with Optimized Column Spacing */
-.ems-leg-card__line-6.ems-leg-project-row {
-    display: grid;
-    grid-template-columns: 190px 1fr;
-    gap: 16px;
-    margin-top: 4px;
-}
-
-.ems-time-inputs-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 4px;
-}
-
-.ems-time-input-field {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.ems-time-formatted {
-    font-size: 11px;
-    font-weight: 700;
-    color: #1e40af;
-    background: #ffffff;
-    border: 1px solid #bfdbfe;
-    border-radius: 3px;
-    padding: 1px 5px;
-    white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-    .ems-leg-card__line-6.ems-leg-project-row {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-}
-
-/* Input Blocks */
-.ems-leg-input-block {
-    margin-bottom: 12px;
-    cursor: default;
 }
 
 .ems-input-label-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
-.ems-field-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: #0f172a;
-    display: flex;
+/* Subtle Quality Dot (Replaces Icon Badges) */
+.ems-quality-dot {
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
-.ems-field-hint {
-    font-weight: 400;
-    color: #64748b;
-    font-size: 11px;
-    margin-left: 4px;
+.ems-quality-dot .ems-dot {
+    font-size: 8px;
+}
+
+.ems-quality-dot--poor {
+    color: #d97706;
+}
+
+.ems-quality-dot--medium {
+    color: #3b82f6;
+}
+
+.ems-quality-dot--good {
+    color: #16a34a;
 }
 
 .ems-textarea {
     width: 100%;
-    padding: 8px 10px;
-    font-size: 13px;
+    padding: 6px 8px;
+    font-size: 12px;
     color: #0f172a;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 4px;
     line-height: 1.4;
     resize: vertical;
     box-sizing: border-box;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    font-family: inherit;
 }
 
 .ems-textarea::placeholder {
-    color: #64748b;
+    color: #94a3b8;
 }
 
 .ems-textarea:focus {
     border-color: #2563eb;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-.ems-textarea--sm {
-    font-size: 12px;
-}
-
-/* Coaching Chips */
-.ems-coaching-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 6px;
-}
-
-.ems-chip {
-    border: none;
-    border-radius: 12px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: all 0.15s ease;
-}
-
-.ems-chip--coach {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.ems-chip--coach:hover {
-    background: #fde68a;
-}
-
-.ems-chip--action {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-.ems-chip--action:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-}
-
-/* Quality Badges */
-.ems-quality-badge {
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.ems-quality-badge--good {
-    color: #166534;
-}
-
-.ems-quality-badge--medium {
-    color: #d97706;
-}
-
-.ems-quality-badge--poor {
-    color: #dc2626;
-}
-
-/* Split Input Columns */
-.ems-leg-split-inputs {
+/* 2-Column Grid: Escape Route + Rest (mins) */
+.ems-leg-bottom-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 90px;
     gap: 12px;
+    align-items: end;
 }
 
-.ems-rest-controls {
+.ems-input-text {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    box-sizing: border-box;
+    height: 30px;
+    font-family: inherit;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.ems-input-text::placeholder {
+    color: #94a3b8;
+}
+
+.ems-input-text:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.ems-leg-input-block--rest {
     display: flex;
+    flex-direction: column;
+}
+
+.ems-label-with-addon {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 6px;
-    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.ems-add-activity-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: #2563eb;
+    cursor: pointer;
+}
+
+.ems-add-activity-btn:hover {
+    text-decoration: underline;
 }
 
 .ems-input-number {
-    width: 75px;
+    width: 100%;
     padding: 4px 6px;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: #0f172a;
     background: #ffffff;
-    text-align: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
     box-sizing: border-box;
+    height: 30px;
+    font-family: inherit;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .ems-input-number:focus {
     border-color: #2563eb;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-.ems-unit {
-    font-size: 12px;
-    color: #64748b;
+.ems-leg-input-block--activity {
+    margin-top: 2px;
 }
 
-.ems-quick-rest-btns {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
-}
-
-.ems-quick-rest-btns button {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    color: #475569;
-    cursor: pointer;
-}
-
-.ems-quick-rest-btns button:hover {
-    background: #e2e8f0;
-}
-
-.ems-mt-1 {
-    margin-top: 6px;
-    width: 100%;
-    box-sizing: border-box;
+@media (max-width: 640px) {
+    .ems-leg-vector-row {
+        grid-template-columns: auto 1fr;
+    }
+    .ems-vector-arrow {
+        display: none;
+    }
+    .ems-leg-bottom-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
 }
 
 /* Coaching Banner */
 .ems-coaching-banner {
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    font-size: 13px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
 }
 
 .ems-coaching-banner--warning {
     background: #fffbeb;
-    border: 1px solid #fde68a;
+    border-color: #fde68a;
     color: #92400e;
 }
 
 .ems-coaching-banner--success {
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    color: #065f46;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
 }
 
-.ems-coaching-banner__header {
+.ems-coaching-banner__summary {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 6px 12px;
     cursor: pointer;
+    user-select: none;
+    min-height: 28px;
 }
 
 .ems-coaching-banner__title {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .ems-coaching-banner__icon {
-    font-size: 15px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.ems-coaching-banner__text {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ems-coaching-banner__toggle-btn {
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: #92400e;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+
+.ems-coaching-banner__toggle-btn:hover {
+    background: rgba(146, 64, 14, 0.08);
+}
+
+.ems-toggle-icon {
+    font-size: 9px;
 }
 
 .ems-coaching-list {
-    margin: 10px 0 0 0;
-    padding: 0;
+    margin: 0;
+    padding: 6px 12px 10px 12px;
+    border-top: 1px solid rgba(253, 230, 138, 0.6);
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .ems-coaching-item {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.4;
 }
 
 .ems-coaching-item__icon {
     margin-top: 2px;
-    font-size: 11px;
+    font-size: 10px;
+    flex-shrink: 0;
 }
 
 .ems-coaching-item--warning .ems-coaching-item__icon {

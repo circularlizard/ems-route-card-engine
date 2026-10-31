@@ -44,14 +44,7 @@ export function RouteCardStudio({
 
     return (
         <div className="ems-route-card-studio">
-            {!isShortcode && (
-                <div className="ems-route-card-studio__header">
-                    <h2>DofE Route Card Studio &amp; Terrain Engine</h2>
-                    <p>Plan expedition routes, synchronize interactive maps with route cards, manage OS Terrain 50 elevation tiles, and export DofE-compliant cards.</p>
-                </div>
-            )}
-
-            {/* Navigation Tabs (Only in standalone admin studio, hidden on front-end shortcodes) */}
+            {/* Top-Level Navigation Tabs directly in primary header */}
             {!isShortcode && (
                 <div className="ems-studio-tabs">
                     <button
@@ -59,7 +52,7 @@ export function RouteCardStudio({
                         className={`ems-studio-tab ${activeTab === 'sandbox' ? 'ems-studio-tab--active' : ''}`}
                         onClick={() => setActiveTab('sandbox')}
                     >
-                        <FontAwesomeIcon icon={faRoute} className="ems-tab-icon" /> Route Card Studio &amp; Sandbox
+                        <FontAwesomeIcon icon={faRoute} className="ems-tab-icon" /> Route Card Studio &amp; Analysis
                     </button>
                     <button
                         type="button"

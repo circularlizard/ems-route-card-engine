@@ -10,7 +10,6 @@ import {
     faCircleNotch,
     faRotateLeft,
     faCheck,
-    faCalendarDay,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff } from '../types/route-card';
@@ -87,6 +86,15 @@ export function RouteCardBuilder({
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+    // Auto-dismiss status toast after 3 seconds
+    useEffect(() => {
+        if (!statusMessage) return;
+        const timer = setTimeout(() => {
+            setStatusMessage(null);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [statusMessage]);
 
     // Re-import reconciliation modal state
     const [pendingReimport, setPendingReimport] = useState<{
@@ -391,8 +399,8 @@ export function RouteCardBuilder({
 
     return (
         <div className="ems-builder-container">
-            {/* Multi-Day Navigation Tabs with FontAwesome Icons */}
-            <div className="ems-day-tabs">
+            {/* Multi-Day Navigation Segmented Control */}
+            <div className="ems-day-segmented-control" aria-label="Day selection">
                 {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
                     const d = daysData[day];
                     const hasRoute = Boolean(d && d.legs && d.legs.length > 0);
@@ -404,23 +412,23 @@ export function RouteCardBuilder({
                         <button
                             key={day}
                             type="button"
-                            className={`ems-day-tab ${currentDay === day ? 'ems-day-tab--active' : ''}`}
+                            className={`ems-day-segment-btn ${currentDay === day ? 'ems-day-segment-btn--active' : ''}`}
                             onClick={() => {
                                 setCurrentDay(day);
                                 setActiveLegIndex(0);
                                 setStatusMessage(null);
                             }}
                         >
-                            <FontAwesomeIcon icon={faCalendarDay} className="ems-tab-icon" /> Day {day}
-                            {hasRoute && <span className="ems-day-tab-dist">({distKm} km)</span>}
+                            Day {day}
+                            {hasRoute && <span className="ems-day-segment-dist">({distKm} km)</span>}
                         </button>
                     );
                 })}
             </div>
 
-            {/* Notification Banner */}
+            {/* Transient Toast Notification */}
             {statusMessage && (
-                <div className={`ems-status-alert ems-status-alert--${statusMessage.type}`}>
+                <div className={`ems-toast ems-toast--${statusMessage.type}`} role="status">
                     <FontAwesomeIcon icon={statusMessage.type === 'success' ? faCheck : faTrashCan} />
                     <span>{statusMessage.text}</span>
                 </div>

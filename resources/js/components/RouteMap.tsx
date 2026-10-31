@@ -4,7 +4,6 @@ import proj4 from 'proj4';
 import proj4leaflet from 'proj4leaflet';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faLayerGroup,
     faExpand,
     faCompress,
     faLocationCrosshairs,
@@ -469,8 +468,7 @@ export function RouteMap({
         <div className={`ems-route-map-wrapper ${isExpanded ? 'ems-route-map-wrapper--expanded' : ''}`}>
             {/* Map Top Bar Controls */}
             <div className="ems-route-map__toolbar">
-                <div className="ems-route-map__layer-select">
-                    <FontAwesomeIcon icon={faLayerGroup} className="ems-map-btn-icon" />
+                <div className="ems-route-map__layer-select" role="group" aria-label="Map Tile Layer">
                     <button
                         type="button"
                         className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
