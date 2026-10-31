@@ -234,7 +234,7 @@ export function RouteLegCard({
                     <div className="ems-leg-input-block ems-leg-input-block--rest">
                         <div className="ems-label-with-addon">
                             <label htmlFor={restMinsId} className="ems-field-label">
-                                Rest (mins)
+                                Rest (min)
                             </label>
                             {!showActivity && projectRestMins === 0 && (
                                 <button

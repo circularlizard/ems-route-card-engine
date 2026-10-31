@@ -399,33 +399,6 @@ export function RouteCardBuilder({
 
     return (
         <div className="ems-builder-container">
-            {/* Multi-Day Navigation Segmented Control */}
-            <div className="ems-day-segmented-control" aria-label="Day selection">
-                {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
-                    const d = daysData[day];
-                    const hasRoute = Boolean(d && d.legs && d.legs.length > 0);
-                    const distKm = hasRoute
-                        ? d.legs.reduce((acc, l) => acc + l.distance_km, 0).toFixed(1)
-                        : null;
-
-                    return (
-                        <button
-                            key={day}
-                            type="button"
-                            className={`ems-day-segment-btn ${currentDay === day ? 'ems-day-segment-btn--active' : ''}`}
-                            onClick={() => {
-                                setCurrentDay(day);
-                                setActiveLegIndex(0);
-                                setStatusMessage(null);
-                            }}
-                        >
-                            Day {day}
-                            {hasRoute && <span className="ems-day-segment-dist">({distKm} km)</span>}
-                        </button>
-                    );
-                })}
-            </div>
-
             {/* Transient Toast Notification */}
             {statusMessage && (
                 <div className={`ems-toast ems-toast--${statusMessage.type}`} role="status">
@@ -451,6 +424,33 @@ export function RouteCardBuilder({
                         <span className={`ems-badge-status ems-badge-status--${cardStatus}`}>
                             {cardStatus.toUpperCase()}
                         </span>
+
+                        {/* Multi-Day Navigation Segmented Control */}
+                        <div className="ems-day-segmented-control" aria-label="Day selection">
+                            {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
+                                const d = daysData[day];
+                                const hasRoute = Boolean(d && d.legs && d.legs.length > 0);
+                                const distKm = hasRoute
+                                    ? d.legs.reduce((acc, l) => acc + l.distance_km, 0).toFixed(1)
+                                    : null;
+
+                                return (
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        className={`ems-day-segment-btn ${currentDay === day ? 'ems-day-segment-btn--active' : ''}`}
+                                        onClick={() => {
+                                            setCurrentDay(day);
+                                            setActiveLegIndex(0);
+                                            setStatusMessage(null);
+                                        }}
+                                    >
+                                        Day {day}
+                                        {hasRoute && <span className="ems-day-segment-dist">({distKm} km)</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div className="ems-builder-actions">
