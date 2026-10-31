@@ -60,6 +60,7 @@ interface RouteMapProps {
     osMapsApiKey?: string;
     hoveredVertexIndex?: number | null;
     onHoverVertex?: (vertexIndex: number | null) => void;
+    hoveredLegIndex?: number | null;
 }
 
 export function RouteMap({
@@ -71,6 +72,7 @@ export function RouteMap({
     osMapsApiKey,
     hoveredVertexIndex,
     onHoverVertex,
+    hoveredLegIndex,
 }: RouteMapProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -220,6 +222,8 @@ export function RouteMap({
 
             // Inactive polyline
             if (!isActive) {
+                const isHovered = hoveredLegIndex !== undefined && hoveredLegIndex !== null && idx === hoveredLegIndex;
+
                 // Wide transparent buffer line (22px) so users can easily click near the leg to select it
                 const hitBuffer = L.polyline(legPts, {
                     weight: 22,
@@ -233,7 +237,7 @@ export function RouteMap({
                 // High-contrast white casing underlay so dashes pop vividly over grey contour and terrain shading
                 const casingLine = L.polyline(legPts, {
                     color: '#ffffff',
-                    weight: 6,
+                    weight: isHovered ? 8 : 6,
                     opacity: 0.9,
                     lineCap: 'round',
                     lineJoin: 'round',
@@ -242,10 +246,10 @@ export function RouteMap({
                 group.addLayer(casingLine);
 
                 const inactiveLine = L.polyline(legPts, {
-                    color: '#7c3aed',
-                    weight: 4,
+                    color: isHovered ? '#2563eb' : '#7c3aed',
+                    weight: isHovered ? 6 : 4,
                     opacity: 1.0,
-                    dashArray: '6, 6',
+                    dashArray: isHovered ? undefined : '6, 6',
                 });
 
                 inactiveLine.on('click', () => onSelectLeg(idx));
@@ -264,6 +268,16 @@ export function RouteMap({
             }
 
             if (activePts.length >= 2) {
+                // Smoothly pan map to active leg if outside current viewport bounds
+                try {
+                    const mapBounds = map.getBounds();
+                    const activeBounds = L.latLngBounds(activePts);
+                    if (!mapBounds.intersects(activeBounds)) {
+                        map.panInsideBounds(activeBounds, { animate: true });
+                    }
+                } catch (e) {
+                    // Ignore projection bounds errors in headless/JSDOM
+                }
                 // Glow outer line (non-interactive so it doesn't intercept clicks)
                 const glowLine = L.polyline(activePts, {
                     color: '#60a5fa',
@@ -371,7 +385,7 @@ export function RouteMap({
                 }
             }
         });
-    }, [mapReady, vertices, legs, activeLegIndex, onRequestSplitAtVertex, onSelectLeg, onHoverVertex]);
+    }, [mapReady, vertices, legs, activeLegIndex, hoveredLegIndex, onRequestSplitAtVertex, onSelectLeg, onHoverVertex]);
 
     // Fit entire route bounds on new route import or day switch
     useEffect(() => {

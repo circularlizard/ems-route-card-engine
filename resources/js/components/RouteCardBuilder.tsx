@@ -10,6 +10,10 @@ import {
     faCircleNotch,
     faRotateLeft,
     faCheck,
+    faChevronLeft,
+    faChevronRight,
+    faExpand,
+    faCompress,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff } from '../types/route-card';
@@ -56,6 +60,18 @@ export function RouteCardBuilder({
     const [viewMode, setViewMode] = useState<'split' | 'table' | 'map'>('split');
     const [activeLegIndex, setActiveLegIndex] = useState(0);
     const [hoveredVertexIndex, setHoveredVertexIndex] = useState<number | null>(null);
+    const [hoveredLegIndex, setHoveredLegIndex] = useState<number | null>(null);
+    const [expandAllLegs, setExpandAllLegs] = useState(false);
+    const [recentlySplitIndex, setRecentlySplitIndex] = useState<number | null>(null);
+    const [isMobileStepper, setIsMobileStepper] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 1024 : false));
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileStepper(window.innerWidth <= 1024);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Days Dictionary: Guarantees 100% strict isolation between Day 1, Day 2, Day 3
     const [daysData, setDaysData] = useState<Record<number, DayRouteData>>(() => {
@@ -81,6 +97,21 @@ export function RouteCardBuilder({
 
     const { routeTitle, vertices, legs, cardId, cardStatus } = activeDayData;
     const undoStack = activeDayData.undoStack || [];
+
+    // Global keyboard navigation: Alt + ArrowUp/Left (Prev Leg), Alt + ArrowDown/Right (Next Leg)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowLeft')) {
+                e.preventDefault();
+                setActiveLegIndex((prev) => Math.max(0, prev - 1));
+            } else if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowRight')) {
+                e.preventDefault();
+                setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1));
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [legs.length]);
 
     // UI Loading & Feedback
     const [isLoading, setIsLoading] = useState(false);
@@ -285,6 +316,8 @@ export function RouteCardBuilder({
             undoStack: [...undoStack, legs],
         });
         setActiveLegIndex(legIdx);
+        setRecentlySplitIndex(legIdx + 1);
+        setTimeout(() => setRecentlySplitIndex(null), 2500);
         setStatusMessage({ text: `Leg ${leg.leg_number} split into two legs.`, type: 'success' });
     };
 
@@ -595,6 +628,7 @@ export function RouteCardBuilder({
                             osMapsApiKey={osMapsApiKey}
                             hoveredVertexIndex={hoveredVertexIndex}
                             onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
+                            hoveredLegIndex={hoveredLegIndex}
                         />
 
                         <RouteElevationProfile
@@ -611,23 +645,99 @@ export function RouteCardBuilder({
                     <div ref={legCardsContainerRef} className="ems-studio-pane ems-studio-pane--cards">
                         <div className="ems-cards-deck-header">
                             <h3>Journey Legs ({legs.length})</h3>
+                            {!isMobileStepper && (
+                                <button
+                                    type="button"
+                                    className="ems-deck-toggle-btn"
+                                    onClick={() => setExpandAllLegs((prev) => !prev)}
+                                    title={expandAllLegs ? 'Collapse inactive legs to 44px summary bars' : 'Expand all legs for editing'}
+                                >
+                                    <FontAwesomeIcon icon={expandAllLegs ? faCompress : faExpand} />
+                                    <span>{expandAllLegs ? 'Collapse to Active' : 'Expand All'}</span>
+                                </button>
+                            )}
                         </div>
 
+                        {/* Mobile & Tablet Stepper Bar */}
+                        {isMobileStepper && (
+                            <div className="ems-leg-stepper-bar" role="navigation" aria-label="Leg Stepper">
+                                <button
+                                    type="button"
+                                    className="ems-stepper-btn"
+                                    onClick={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
+                                    disabled={activeLegIndex === 0}
+                                    title="Previous Leg (Alt + Left)"
+                                >
+                                    <FontAwesomeIcon icon={faChevronLeft} /> Prev
+                                </button>
+
+                                <div className="ems-stepper-center">
+                                    <span className="ems-stepper-label">
+                                        Leg {activeLegIndex + 1} of {legs.length}
+                                    </span>
+                                    <div className="ems-stepper-pills">
+                                        {legs.map((l, lIdx) => {
+                                            const isComplete = Boolean(
+                                                l.route_description &&
+                                                l.route_description.trim().length >= 10 &&
+                                                l.escape_route &&
+                                                l.escape_route.trim().length >= 5
+                                            );
+                                            const isCurrent = lIdx === activeLegIndex;
+                                            const isNew = lIdx === recentlySplitIndex;
+
+                                            return (
+                                                <button
+                                                    key={l.leg_number}
+                                                    type="button"
+                                                    className={`ems-stepper-pill ${isCurrent ? 'ems-stepper-pill--active' : ''} ${isComplete ? 'ems-stepper-pill--complete' : 'ems-stepper-pill--incomplete'} ${isNew ? 'ems-stepper-pill--flash' : ''}`}
+                                                    onClick={() => setActiveLegIndex(lIdx)}
+                                                    title={`Jump to Leg ${l.leg_number} (${l.start_name} → ${l.end_name})`}
+                                                >
+                                                    {l.leg_number}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="ems-stepper-btn"
+                                    onClick={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
+                                    disabled={activeLegIndex === legs.length - 1}
+                                    title="Next Leg (Alt + Right)"
+                                >
+                                    Next <FontAwesomeIcon icon={faChevronRight} />
+                                </button>
+                            </div>
+                        )}
+
                         <div className="ems-leg-cards-list">
-                            {legs.map((leg, idx) => (
-                                <RouteLegCard
-                                    key={leg.leg_number}
-                                    leg={leg}
-                                    vertices={vertices}
-                                    isActive={idx === activeLegIndex}
-                                    isLastLeg={idx === legs.length - 1}
-                                    nextLegStartName={legs[idx + 1]?.start_name}
-                                    onSelect={() => setActiveLegIndex(idx)}
-                                    onUpdateLeg={(updated) => handleUpdateLeg(idx, updated)}
-                                    onSplitLeg={() => handleSplitLeg(idx)}
-                                    onMergeLeg={() => handleMergeLeg(idx)}
-                                />
-                            ))}
+                            {legs.map((leg, idx) => {
+                                if (isMobileStepper && idx !== activeLegIndex) {
+                                    return null;
+                                }
+                                const isCardExpanded = isMobileStepper ? true : (expandAllLegs || idx === activeLegIndex);
+                                return (
+                                    <RouteLegCard
+                                        key={leg.leg_number}
+                                        leg={leg}
+                                        vertices={vertices}
+                                        isActive={idx === activeLegIndex}
+                                        isExpanded={isCardExpanded}
+                                        isLastLeg={idx === legs.length - 1}
+                                        nextLegStartName={legs[idx + 1]?.start_name}
+                                        onSelect={() => setActiveLegIndex(idx)}
+                                        onHoverLeg={(hovered) => setHoveredLegIndex(hovered ? idx : null)}
+                                        onUpdateLeg={(updated) => handleUpdateLeg(idx, updated)}
+                                        onSplitLeg={() => handleSplitLeg(idx)}
+                                        onMergeLeg={() => handleMergeLeg(idx)}
+                                        onPrevLeg={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
+                                        onNextLeg={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

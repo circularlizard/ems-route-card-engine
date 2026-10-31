@@ -1,4 +1,6 @@
 import { useId, useRef, useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
 import { formatHoursMins } from '../utils/route-calculations';
 
@@ -6,24 +8,32 @@ interface RouteLegCardProps {
     leg: RouteLeg;
     vertices?: RouteVertex[];
     isActive: boolean;
+    isExpanded?: boolean;
     isLastLeg: boolean;
     nextLegStartName?: string;
     onSelect: () => void;
+    onHoverLeg?: (isHovered: boolean) => void;
     onUpdateLeg: (updatedLeg: RouteLeg) => void;
     onSplitLeg: () => void;
     onMergeLeg: () => void;
+    onPrevLeg?: () => void;
+    onNextLeg?: () => void;
 }
 
 export function RouteLegCard({
     leg,
     vertices,
     isActive,
+    isExpanded,
     isLastLeg,
     nextLegStartName: _nextLegStartName,
     onSelect,
+    onHoverLeg,
     onUpdateLeg,
     onSplitLeg,
     onMergeLeg,
+    onPrevLeg,
+    onNextLeg,
 }: RouteLegCardProps) {
     const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -44,6 +54,34 @@ export function RouteLegCard({
         if (!el) return;
         el.style.height = 'auto';
         el.style.height = `${el.scrollHeight}px`;
+    };
+
+    const isCardExpanded = isExpanded !== undefined ? isExpanded : true;
+
+    // Check completion status (Amber if missing navigation or escape details, Green if complete)
+    const isLegComplete = Boolean(
+        leg.route_description &&
+        leg.route_description.trim().length >= 10 &&
+        leg.escape_route &&
+        leg.escape_route.trim().length >= 5
+    );
+
+    // Touch swipe handling for horizontal stepping on touch devices
+    const touchStartXRef = useRef<number | null>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartXRef.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartXRef.current === null) return;
+        const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+        touchStartXRef.current = null;
+        if (deltaX < -50 && onNextLeg) {
+            onNextLeg();
+        } else if (deltaX > 50 && onPrevLeg) {
+            onPrevLeg();
+        }
     };
 
     // Auto-scroll active card into view when selected
@@ -120,11 +158,58 @@ export function RouteLegCard({
         ? `+${Math.round(leg.ascent_m)}m / -${Math.round(leg.descent_m)}m`
         : `+${Math.round(leg.ascent_m)}m`;
 
+    // Collapsed Accordion Row (Inactive legs on desktop when expandAllLegs is false)
+    if (!isCardExpanded) {
+        return (
+            <div
+                ref={cardRef}
+                className="ems-leg-summary-row"
+                onClick={onSelect}
+                onMouseEnter={() => onHoverLeg?.(true)}
+                onMouseLeave={() => onHoverLeg?.(false)}
+                title={`Click to focus Leg ${leg.leg_number}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelect();
+                    }
+                }}
+            >
+                <div className="ems-leg-summary-left">
+                    <span className="ems-leg-number-badge ems-leg-number-badge--sm" title={`Leg ${leg.leg_number}`}>
+                        {leg.leg_number}
+                    </span>
+                    <span className="ems-leg-summary-names">
+                        {startName} <span className="ems-summary-arrow">→</span> {endName}
+                    </span>
+                </div>
+
+                <div className="ems-leg-summary-right">
+                    <span className="ems-leg-summary-stats font-mono">
+                        {leg.distance_km} km • +{Math.round(leg.ascent_m)}m • {formatHoursMins(leg.walking_minutes)}
+                    </span>
+                    <span
+                        className={`ems-leg-status-dot ${isLegComplete ? 'ems-leg-status-dot--complete' : 'ems-leg-status-dot--incomplete'}`}
+                        title={isLegComplete ? 'Leg route checks complete' : 'Needs route or escape details'}
+                        aria-label={isLegComplete ? 'Complete' : 'Needs details'}
+                    >
+                        ●
+                    </span>
+                    <FontAwesomeIcon icon={faChevronRight} className="ems-summary-chevron" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div
             ref={cardRef}
             className={`ems-leg-card ${isActive ? 'ems-leg-card--active' : ''}`}
             onClick={onSelect}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
         >
             {/* Header Area: Side-by-Side Vector + Flush Subtext + Inline Metadata Sub-bar */}
             <div className="ems-leg-card__header">
