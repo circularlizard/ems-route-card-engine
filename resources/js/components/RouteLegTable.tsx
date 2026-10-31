@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faScissors,
@@ -35,6 +36,17 @@ export function RouteLegTable({
         }
         onUpdateLeg(legIndex, updated as RouteLeg);
     };
+
+    const syncTextareaHeight = (el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    };
+
+    useEffect(() => {
+        const textareas = document.querySelectorAll<HTMLTextAreaElement>('.ems-table-textarea.ems-auto-expand');
+        textareas.forEach((el) => syncTextareaHeight(el));
+    }, [legs]);
 
     return (
         <div className="ems-table-responsive-wrapper">
@@ -108,6 +120,7 @@ export function RouteLegTable({
                                         className="ems-auto-expand ems-table-textarea"
                                         value={leg.route_description || ''}
                                         onClick={(e) => e.stopPropagation()}
+                                        onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'route_description', e.target.value)}
                                         placeholder="Path, handrails, features..."
                                     />
@@ -118,6 +131,7 @@ export function RouteLegTable({
                                         className="ems-auto-expand ems-table-textarea"
                                         value={leg.activity_notes || ''}
                                         onClick={(e) => e.stopPropagation()}
+                                        onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'activity_notes', e.target.value)}
                                         placeholder="Project / aim activity..."
                                     />
@@ -128,6 +142,7 @@ export function RouteLegTable({
                                         className="ems-auto-expand ems-table-textarea"
                                         value={leg.escape_route || ''}
                                         onClick={(e) => e.stopPropagation()}
+                                        onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'escape_route', e.target.value)}
                                         placeholder="Escape plan..."
                                     />

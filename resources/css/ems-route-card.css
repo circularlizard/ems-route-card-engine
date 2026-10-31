@@ -1210,16 +1210,18 @@
 }
 
 /* Auto-Expanding Textareas */
-textarea.ems-auto-expand {
+textarea.ems-auto-expand,
+.ems-leg-card textarea,
+.ems-route-table textarea {
     field-sizing: content; /* Native CSS auto-grow in modern browsers */
     display: block;
     width: 100%;
-    min-height: 32px;
+    min-height: 34px;
     height: auto;
     padding: 6px 8px;
     font-size: 12.5px;
     line-height: 1.4;
-    resize: none; /* Remove bottom-right drag handle */
+    resize: none !important; /* Remove bottom-right drag handle */
     overflow-y: hidden; /* Prevent internal scrollbars */
     box-sizing: border-box;
     border: 1px solid #cbd5e1;
@@ -1230,13 +1232,17 @@ textarea.ems-auto-expand {
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-textarea.ems-auto-expand:focus {
+textarea.ems-auto-expand:focus,
+.ems-leg-card textarea:focus,
+.ems-route-table textarea:focus {
     border-color: #2563eb;
     outline: none;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-textarea.ems-auto-expand::placeholder {
+textarea.ems-auto-expand::placeholder,
+.ems-leg-card textarea::placeholder,
+.ems-route-table textarea::placeholder {
     color: #94a3b8;
 }
 
@@ -1249,7 +1255,8 @@ textarea.ems-auto-expand::placeholder {
     border: 1px solid #cbd5e1;
     border-radius: 4px;
     line-height: 1.4;
-    resize: none;
+    resize: none !important;
+    overflow-y: hidden;
     box-sizing: border-box;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     font-family: inherit;
@@ -1270,7 +1277,7 @@ textarea.ems-auto-expand::placeholder {
     display: grid;
     grid-template-columns: 1fr 120px;
     gap: 12px;
-    align-items: end;
+    align-items: start;
 }
 
 .ems-input-text {

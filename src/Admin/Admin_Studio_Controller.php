@@ -32,11 +32,12 @@ class Admin_Studio_Controller {
         $style_path  = EMS_ROUTE_CARD_PATH . 'assets/js/route-card-studio.css';
 
         if ( file_exists( $script_path ) ) {
+            $ver = (string) filemtime( $script_path );
             wp_enqueue_script(
                 'ems-route-card-studio',
                 EMS_ROUTE_CARD_URL . 'assets/js/route-card-studio.js',
                 [ 'wp-element' ],
-                EMS_ROUTE_CARD_VERSION,
+                $ver,
                 true
             );
 
@@ -52,11 +53,12 @@ class Admin_Studio_Controller {
         }
 
         if ( file_exists( $style_path ) ) {
+            $style_ver = (string) filemtime( $style_path );
             wp_enqueue_style(
                 'ems-route-card-studio',
                 EMS_ROUTE_CARD_URL . 'assets/js/route-card-studio.css',
                 [],
-                EMS_ROUTE_CARD_VERSION
+                $style_ver
             );
         }
     }

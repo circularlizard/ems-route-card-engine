@@ -34,7 +34,17 @@ export function RouteLegCard({
     const restMinsId = useId();
     const activityNotesId = useId();
 
+    const navDescRef = useRef<HTMLTextAreaElement | null>(null);
+    const escapeRouteRef = useRef<HTMLTextAreaElement | null>(null);
+    const activityNotesRef = useRef<HTMLTextAreaElement | null>(null);
+
     const isFirstRenderRef = useRef(true);
+
+    const syncTextareaHeight = (el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    };
 
     // Auto-scroll active card into view when selected
     useEffect(() => {
@@ -80,6 +90,13 @@ export function RouteLegCard({
     // Progressive disclosure state for optional project activity
     const hasInitialActivity = Boolean(leg.activity_notes && leg.activity_notes.trim().length > 0);
     const [showActivity, setShowActivity] = useState(hasInitialActivity || projectRestMins > 0);
+
+    // Sync heights on render and value changes
+    useEffect(() => {
+        syncTextareaHeight(navDescRef.current);
+        syncTextareaHeight(escapeRouteRef.current);
+        syncTextareaHeight(activityNotesRef.current);
+    }, [desc, leg.escape_route, leg.activity_notes, showActivity]);
 
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         const updatedLeg: any = {
@@ -206,10 +223,12 @@ export function RouteLegCard({
                     </div>
 
                     <textarea
+                        ref={navDescRef}
                         id={navDescId}
                         className="ems-textarea ems-auto-expand"
                         rows={2}
                         value={desc}
+                        onInput={(e) => syncTextareaHeight(e.currentTarget)}
                         onChange={(e) => handleTextChange('route_description', e.target.value)}
                         placeholder="Describe paths, tracks, handrails, terrain features, col crossings, and checkpoint arrival..."
                     />
@@ -222,10 +241,12 @@ export function RouteLegCard({
                             Escape Route
                         </label>
                         <textarea
+                            ref={escapeRouteRef}
                             id={escapeRouteId}
                             rows={1}
                             className="ems-auto-expand"
                             value={leg.escape_route || ''}
+                            onInput={(e) => syncTextareaHeight(e.currentTarget)}
                             onChange={(e) => handleTextChange('escape_route', e.target.value)}
                             placeholder="Emergency egress / valley route in bad weather..."
                         />
@@ -271,10 +292,12 @@ export function RouteLegCard({
                             Project Activity
                         </label>
                         <textarea
+                            ref={activityNotesRef}
                             id={activityNotesId}
                             rows={1}
                             className="ems-auto-expand"
                             value={leg.activity_notes || ''}
+                            onInput={(e) => syncTextareaHeight(e.currentTarget)}
                             onChange={(e) => handleTextChange('activity_notes', e.target.value)}
                             placeholder="Expedition aim / team project observation..."
                         />
