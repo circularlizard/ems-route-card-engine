@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUpload,
@@ -364,6 +364,22 @@ export function RouteCardBuilder({
         setStatusMessage({ text: 'Undo completed.', type: 'success' });
     };
 
+    const handleSelectLeg = useCallback((idx: number) => {
+        setActiveLegIndex(idx);
+    }, []);
+
+    const handleHoverVertex = useCallback((vIdx: number | null) => {
+        setHoveredVertexIndex(vIdx);
+    }, []);
+
+    const handleGhostHoverVertex = useCallback((vIdx: number | null) => {
+        setGhostSplitVertexIndex(vIdx);
+    }, []);
+
+    const handleDragCheckpointChange = useCallback((drag: { checkpointIndex: number; vertexIndex: number } | null) => {
+        setDraggingCheckpoint(drag);
+    }, []);
+
     const handleUpdateLeg = (legIdx: number, updatedLeg: RouteLeg) => {
         const newLegs = [...legs];
         newLegs[legIdx] = updatedLeg;
@@ -646,17 +662,17 @@ export function RouteCardBuilder({
                             vertices={vertices}
                             legs={legs}
                             activeLegIndex={activeLegIndex}
-                            onSelectLeg={(idx) => setActiveLegIndex(idx)}
+                            onSelectLeg={handleSelectLeg}
                             onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
                             onMoveCheckpoint={handleMoveCheckpoint}
                             onDeleteCheckpoint={handleDeleteCheckpoint}
                             ghostSplitVertexIndex={ghostSplitVertexIndex}
-                            onGhostHoverVertex={(vIdx) => setGhostSplitVertexIndex(vIdx)}
+                            onGhostHoverVertex={handleGhostHoverVertex}
                             draggingCheckpoint={draggingCheckpoint}
-                            onDragCheckpointChange={(drag) => setDraggingCheckpoint(drag)}
+                            onDragCheckpointChange={handleDragCheckpointChange}
                             osMapsApiKey={osMapsApiKey}
                             hoveredVertexIndex={hoveredVertexIndex}
-                            onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
+                            onHoverVertex={handleHoverVertex}
                             hoveredLegIndex={hoveredLegIndex}
                         />
 
@@ -665,15 +681,15 @@ export function RouteCardBuilder({
                             legs={legs}
                             activeLegIndex={activeLegIndex}
                             hoveredVertexIndex={hoveredVertexIndex}
-                            onSelectLeg={(idx) => setActiveLegIndex(idx)}
-                            onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
+                            onSelectLeg={handleSelectLeg}
+                            onHoverVertex={handleHoverVertex}
                             onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
                             onMoveCheckpoint={handleMoveCheckpoint}
                             onDeleteCheckpoint={handleDeleteCheckpoint}
                             ghostSplitVertexIndex={ghostSplitVertexIndex}
-                            onGhostHoverVertex={(vIdx) => setGhostSplitVertexIndex(vIdx)}
+                            onGhostHoverVertex={handleGhostHoverVertex}
                             draggingCheckpoint={draggingCheckpoint}
-                            onDragCheckpointChange={(drag) => setDraggingCheckpoint(drag)}
+                            onDragCheckpointChange={handleDragCheckpointChange}
                         />
                     </div>
 

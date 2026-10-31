@@ -93,9 +93,33 @@ export function RouteMap({
     const hoverMarkerRef = useRef<L.CircleMarker | null>(null);
     const ghostMarkerRef = useRef<L.Marker | null>(null);
     const checkpointMarkersRef = useRef<Map<number, L.Marker>>(new Map());
+    const isDraggingRef = useRef(false);
+    const currentSnappedVertexRef = useRef<number | null>(null);
     const loadedRouteSigRef = useRef<string>('');
     const prevActiveLegIndexRef = useRef<number | null>(null);
     const [mapReady, setMapReady] = useState(0);
+
+    // Keep callback props updated in a ref so layer effects never destroy layers on parent re-renders
+    const callbacksRef = useRef({
+        onSelectLeg,
+        onRequestSplitAtVertex,
+        onMoveCheckpoint,
+        onDeleteCheckpoint,
+        onHoverVertex,
+        onGhostHoverVertex,
+        onDragCheckpointChange,
+    });
+    useEffect(() => {
+        callbacksRef.current = {
+            onSelectLeg,
+            onRequestSplitAtVertex,
+            onMoveCheckpoint,
+            onDeleteCheckpoint,
+            onHoverVertex,
+            onGhostHoverVertex,
+            onDragCheckpointChange,
+        };
+    });
 
     const [baseLayer, setBaseLayer] = useState<'opentopo' | 'cyclosm' | 'esri' | 'osm' | 'os'>('opentopo');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -219,6 +243,7 @@ export function RouteMap({
         const map = mapInstanceRef.current;
         const group = routeLayerGroupRef.current;
         if (!map || !group || vertices.length < 2) return;
+        if (isDraggingRef.current) return;
 
         group.clearLayers();
 
@@ -239,14 +264,14 @@ export function RouteMap({
             if (!isActive) {
                 const isHovered = hoveredLegIndex !== undefined && hoveredLegIndex !== null && idx === hoveredLegIndex;
 
-                // Wide transparent buffer line (22px) so users can easily click near the leg to select it
+                // Wide transparent buffer line (24px) so users can easily click near the leg to select it
                 const hitBuffer = L.polyline(legPts, {
-                    weight: 22,
+                    weight: 24,
                     opacity: 0.001,
                     lineCap: 'round',
                     lineJoin: 'round',
                 });
-                hitBuffer.on('click', () => onSelectLeg(idx));
+                hitBuffer.on('click', () => callbacksRef.current.onSelectLeg(idx));
                 group.addLayer(hitBuffer);
 
                 // High-contrast white casing underlay so dashes pop vividly over grey contour and terrain shading
@@ -267,7 +292,7 @@ export function RouteMap({
                     dashArray: isHovered ? undefined : '6, 6',
                 });
 
-                inactiveLine.on('click', () => onSelectLeg(idx));
+                inactiveLine.on('click', () => callbacksRef.current.onSelectLeg(idx));
                 group.addLayer(inactiveLine);
             }
         });
@@ -283,16 +308,6 @@ export function RouteMap({
             }
 
             if (activePts.length >= 2) {
-                // Smoothly pan map to active leg if outside current viewport bounds
-                try {
-                    const mapBounds = map.getBounds();
-                    const activeBounds = L.latLngBounds(activePts);
-                    if (!mapBounds.intersects(activeBounds)) {
-                        map.panInsideBounds(activeBounds, { animate: true });
-                    }
-                } catch (e) {
-                    // Ignore projection bounds errors in headless/JSDOM
-                }
                 // Glow outer line (non-interactive so it doesn't intercept clicks)
                 const glowLine = L.polyline(activePts, {
                     color: '#60a5fa',
@@ -312,12 +327,12 @@ export function RouteMap({
                 const ghostIcon = L.divIcon({
                     className: 'ems-ghost-bead-wrapper',
                     html: `<div class="ems-ghost-bead"><span class="ems-ghost-plus">+</span></div>`,
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11],
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12],
                 });
 
                 const handleActiveLineMouseMove = (e: L.LeafletMouseEvent) => {
-                    if (!activeLeg || vertices.length < 2) return;
+                    if (!activeLeg || vertices.length < 2 || isDraggingRef.current) return;
                     const snapped = findNearestTrackPointIndex(
                         vertices,
                         e.latlng,
@@ -327,67 +342,89 @@ export function RouteMap({
                         100
                     );
                     if (snapped !== null && vertices[snapped]) {
+                        currentSnappedVertexRef.current = snapped;
                         const v = vertices[snapped];
                         const vStart = vertices[activeLeg.start_vertex_index];
                         const vEnd = vertices[activeLeg.end_vertex_index];
                         const dist1 = ((v.dist_from_start_m - vStart.dist_from_start_m) / 1000).toFixed(2);
                         const dist2 = ((vEnd.dist_from_start_m - v.dist_from_start_m) / 1000).toFixed(2);
-                        const tooltipHtml = `<b>+ Split leg here</b> • ${dist1} km | ${dist2} km<br/><span style="color:#64748b">${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</span>`;
+                        const tooltipHtml = `<b>+ Click to split leg</b> • ${dist1} km | ${dist2} km<br/><span style="color:#64748b">${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</span>`;
 
                         if (!ghostMarkerRef.current) {
                             const gm = L.marker([v.lat, v.lon], {
                                 icon: ghostIcon,
                                 zIndexOffset: 1200,
-                                interactive: true,
+                                interactive: false, // pointer-events: none ensures underlying polyline gets all clicks!
                             });
                             gm.bindTooltip(tooltipHtml, {
                                 permanent: true,
                                 direction: 'top',
                                 offset: [0, -12],
                                 className: 'ems-ghost-tooltip',
-                            });
-                            gm.on('click', (ev) => {
-                                if (ev.originalEvent) L.DomEvent.stopPropagation(ev.originalEvent);
-                                onRequestSplitAtVertex?.(snapped);
+                                interactive: false,
                             });
                             gm.addTo(group);
                             ghostMarkerRef.current = gm;
                         } else {
                             ghostMarkerRef.current.setLatLng([v.lat, v.lon]);
                             ghostMarkerRef.current.setTooltipContent(tooltipHtml);
-                            ghostMarkerRef.current.off('click');
-                            ghostMarkerRef.current.on('click', (ev) => {
-                                if (ev.originalEvent) L.DomEvent.stopPropagation(ev.originalEvent);
-                                onRequestSplitAtVertex?.(snapped);
-                            });
                         }
-                        onHoverVertex?.(snapped);
-                        onGhostHoverVertex?.(snapped);
+                        callbacksRef.current.onHoverVertex?.(snapped);
+                        callbacksRef.current.onGhostHoverVertex?.(snapped);
                     }
                 };
 
                 const handleActiveLineMouseOut = () => {
+                    if (isDraggingRef.current) return;
                     if (ghostMarkerRef.current) {
                         group.removeLayer(ghostMarkerRef.current);
                         ghostMarkerRef.current = null;
                     }
-                    onHoverVertex?.(null);
-                    onGhostHoverVertex?.(null);
+                    currentSnappedVertexRef.current = null;
+                    callbacksRef.current.onHoverVertex?.(null);
+                    callbacksRef.current.onGhostHoverVertex?.(null);
                 };
 
-                // Wide transparent buffer line (22px) for effortless hover and click detection
+                const handleActiveLineClick = (e: L.LeafletMouseEvent) => {
+                    if (e.originalEvent) {
+                        L.DomEvent.preventDefault(e.originalEvent);
+                        L.DomEvent.stopPropagation(e.originalEvent);
+                    }
+                    if (!activeLeg || vertices.length < 2) return;
+                    const targetIdx = currentSnappedVertexRef.current ?? findNearestTrackPointIndex(
+                        vertices,
+                        e.latlng,
+                        activeLeg.start_vertex_index,
+                        activeLeg.end_vertex_index,
+                        5,
+                        100
+                    );
+                    if (targetIdx !== null) {
+                        if (ghostMarkerRef.current) {
+                            group.removeLayer(ghostMarkerRef.current);
+                            ghostMarkerRef.current = null;
+                        }
+                        currentSnappedVertexRef.current = null;
+                        callbacksRef.current.onRequestSplitAtVertex?.(targetIdx);
+                    }
+                };
+
+                // Generous 42px hit-buffer line making splitting effortless
                 const activeHitBuffer = L.polyline(activePts, {
-                    weight: 22,
+                    weight: 42,
                     opacity: 0.001,
                     lineCap: 'round',
                     lineJoin: 'round',
+                    className: 'ems-active-leg-hit-buffer',
                 });
                 activeHitBuffer.on('mousemove', handleActiveLineMouseMove);
                 activeHitBuffer.on('mouseout', handleActiveLineMouseOut);
+                activeHitBuffer.on('click', handleActiveLineClick);
                 group.addLayer(activeHitBuffer);
 
                 activeLine.on('mousemove', handleActiveLineMouseMove);
                 activeLine.on('mouseout', handleActiveLineMouseOut);
+                activeLine.on('click', handleActiveLineClick);
                 group.addLayer(activeLine);
             }
         }
@@ -425,6 +462,7 @@ export function RouteMap({
 
             if (isIntermediate) {
                 marker.on('dragstart', () => {
+                    isDraggingRef.current = true;
                     map.dragging.disable();
                     map.getContainer().classList.add('ems-dragging-map');
                     marker.openTooltip();
@@ -441,19 +479,23 @@ export function RouteMap({
                         const dist2 = ((vertices[maxIdx].dist_from_start_m - v.dist_from_start_m) / 1000).toFixed(2);
                         const liveTooltip = `<b>${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</b><br/>Leg ${idx}: ${dist1} km • Leg ${idx + 1}: ${dist2} km`;
                         marker.setTooltipContent(liveTooltip);
-                        onDragCheckpointChange?.({ checkpointIndex: idx, vertexIndex: snapped });
+                        callbacksRef.current.onDragCheckpointChange?.({ checkpointIndex: idx, vertexIndex: snapped });
                     }
                 });
 
                 marker.on('dragend', () => {
                     map.dragging.enable();
                     map.getContainer().classList.remove('ems-dragging-map');
-                    onDragCheckpointChange?.(null);
                     const minIdx = legs[idx - 1].start_vertex_index;
                     const maxIdx = legs[idx].end_vertex_index;
                     const finalSnapped = findNearestTrackPointIndex(vertices, marker.getLatLng(), minIdx, maxIdx, 5, 100);
+                    setTimeout(() => {
+                        isDraggingRef.current = false;
+                        callbacksRef.current.onDragCheckpointChange?.(null);
+                    }, 60);
+
                     if (finalSnapped !== null && finalSnapped !== leg.start_vertex_index) {
-                        onMoveCheckpoint?.(idx, finalSnapped);
+                        callbacksRef.current.onMoveCheckpoint?.(idx, finalSnapped);
                     } else {
                         marker.setLatLng([vStart.lat, vStart.lon]);
                         marker.setTooltipContent(normalTooltip);
@@ -465,20 +507,20 @@ export function RouteMap({
                         L.DomEvent.preventDefault(e.originalEvent);
                         L.DomEvent.stopPropagation(e.originalEvent);
                     }
-                    onDeleteCheckpoint?.(idx);
+                    callbacksRef.current.onDeleteCheckpoint?.(idx);
                 });
 
                 marker.on('click', (e) => {
                     if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
                     if ((e.originalEvent as MouseEvent)?.altKey) {
-                        onDeleteCheckpoint?.(idx);
+                        callbacksRef.current.onDeleteCheckpoint?.(idx);
                     } else {
-                        onSelectLeg(idx);
+                        callbacksRef.current.onSelectLeg(idx);
                     }
                 });
             } else {
                 // Start marker
-                marker.on('click', () => onSelectLeg(0));
+                marker.on('click', () => callbacksRef.current.onSelectLeg(0));
             }
 
             group.addLayer(marker);
@@ -498,7 +540,7 @@ export function RouteMap({
                         direction: 'top',
                         offset: [0, -10],
                     });
-                    finishMarker.on('click', () => onSelectLeg(idx));
+                    finishMarker.on('click', () => callbacksRef.current.onSelectLeg(idx));
                     group.addLayer(finishMarker);
                 }
             }
@@ -509,13 +551,6 @@ export function RouteMap({
         legs,
         activeLegIndex,
         hoveredLegIndex,
-        onRequestSplitAtVertex,
-        onMoveCheckpoint,
-        onDeleteCheckpoint,
-        onSelectLeg,
-        onHoverVertex,
-        onGhostHoverVertex,
-        onDragCheckpointChange,
     ]);
 
     // Sync external ghost hover from Elevation Profile
@@ -527,8 +562,8 @@ export function RouteMap({
         const ghostIcon = L.divIcon({
             className: 'ems-ghost-bead-wrapper',
             html: `<div class="ems-ghost-bead"><span class="ems-ghost-plus">+</span></div>`,
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
         });
 
         if (ghostSplitVertexIndex !== null && ghostSplitVertexIndex !== undefined && vertices[ghostSplitVertexIndex]) {
@@ -537,44 +572,36 @@ export function RouteMap({
             const vEnd = vertices[activeLeg.end_vertex_index];
             const dist1 = ((v.dist_from_start_m - vStart.dist_from_start_m) / 1000).toFixed(2);
             const dist2 = ((vEnd.dist_from_start_m - v.dist_from_start_m) / 1000).toFixed(2);
-            const tooltipHtml = `<b>+ Split leg here</b> • ${dist1} km | ${dist2} km<br/><span style="color:#64748b">${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</span>`;
+            const tooltipHtml = `<b>+ Click to split leg</b> • ${dist1} km | ${dist2} km<br/><span style="color:#64748b">${v.grid_ref_6} · ${Math.round(v.ele_dem)}m</span>`;
 
             if (!ghostMarkerRef.current) {
                 const gm = L.marker([v.lat, v.lon], {
                     icon: ghostIcon,
                     zIndexOffset: 1200,
-                    interactive: true,
+                    interactive: false,
                 });
                 gm.bindTooltip(tooltipHtml, {
                     permanent: true,
                     direction: 'top',
                     offset: [0, -12],
                     className: 'ems-ghost-tooltip',
-                });
-                gm.on('click', (ev) => {
-                    if (ev.originalEvent) L.DomEvent.stopPropagation(ev.originalEvent);
-                    onRequestSplitAtVertex?.(ghostSplitVertexIndex);
+                    interactive: false,
                 });
                 gm.addTo(group);
                 ghostMarkerRef.current = gm;
             } else {
                 ghostMarkerRef.current.setLatLng([v.lat, v.lon]);
                 ghostMarkerRef.current.setTooltipContent(tooltipHtml);
-                ghostMarkerRef.current.off('click');
-                ghostMarkerRef.current.on('click', (ev) => {
-                    if (ev.originalEvent) L.DomEvent.stopPropagation(ev.originalEvent);
-                    onRequestSplitAtVertex?.(ghostSplitVertexIndex);
-                });
             }
         } else if (ghostSplitVertexIndex === null && ghostMarkerRef.current) {
             group.removeLayer(ghostMarkerRef.current);
             ghostMarkerRef.current = null;
         }
-    }, [ghostSplitVertexIndex, activeLegIndex, legs, vertices, onRequestSplitAtVertex]);
+    }, [ghostSplitVertexIndex, activeLegIndex, legs, vertices]);
 
     // Sync external checkpoint dragging from Elevation Profile
     useEffect(() => {
-        if (!draggingCheckpoint || !vertices[draggingCheckpoint.vertexIndex]) return;
+        if (!draggingCheckpoint || !vertices[draggingCheckpoint.vertexIndex] || isDraggingRef.current) return;
         const marker = checkpointMarkersRef.current.get(draggingCheckpoint.checkpointIndex);
         if (marker) {
             const v = vertices[draggingCheckpoint.vertexIndex];
@@ -582,7 +609,7 @@ export function RouteMap({
         }
     }, [draggingCheckpoint, vertices]);
 
-    // Fit entire route bounds on new route import or day switch
+    // Fit entire route bounds on new route import or projection switch
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map || vertices.length < 2) {
@@ -599,40 +626,53 @@ export function RouteMap({
 
         if (loadedRouteSigRef.current !== sig) {
             loadedRouteSigRef.current = sig;
-            // Prevent active leg effect from immediately overwriting whole route view on import
             prevActiveLegIndexRef.current = activeLegIndex;
 
-            const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
-            map.fitBounds(allCoords, {
-                padding: [15, 15],
-                maxZoom: isBng ? 9 : 16,
-            });
+            try {
+                const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
+                map.fitBounds(allCoords, {
+                    padding: [15, 15],
+                    maxZoom: isBng ? 9 : 16,
+                });
+            } catch (e) {
+                // Ignore bounds calculation errors
+            }
         }
-    }, [mapReady, vertices, activeLegIndex, isBng]);
+    }, [mapReady, vertices, isBng]);
 
     // Pan / Zoom smoothly when active leg changes via user selection
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map || vertices.length === 0 || !legs[activeLegIndex]) return;
 
-        // Only zoom if the user actually switched legs (not on import or split)
-        if (prevActiveLegIndexRef.current !== null && prevActiveLegIndexRef.current !== activeLegIndex) {
-            const leg = legs[activeLegIndex];
-            const legCoords: [number, number][] = [];
-            for (let v = leg.start_vertex_index; v <= leg.end_vertex_index; v++) {
-                if (vertices[v]) {
-                    legCoords.push([vertices[v].lat, vertices[v].lon]);
+        try {
+            const size = map.getSize();
+            if (size.x > 0 && size.y > 0 && prevActiveLegIndexRef.current !== null && prevActiveLegIndexRef.current !== activeLegIndex) {
+                const leg = legs[activeLegIndex];
+                const legCoords: [number, number][] = [];
+                for (let v = leg.start_vertex_index; v <= leg.end_vertex_index; v++) {
+                    if (vertices[v]) {
+                        legCoords.push([vertices[v].lat, vertices[v].lon]);
+                    }
+                }
+
+                if (legCoords.length >= 2) {
+                    const activeBounds = L.latLngBounds(legCoords);
+                    if (activeBounds.isValid()) {
+                        const mapBounds = map.getBounds();
+                        if (!mapBounds.intersects(activeBounds)) {
+                            map.fitBounds(activeBounds, {
+                                padding: [45, 45],
+                                maxZoom: isBng ? 10 : 15,
+                                animate: true,
+                                duration: 0.4,
+                            });
+                        }
+                    }
                 }
             }
-
-            if (legCoords.length >= 2) {
-                map.fitBounds(legCoords, {
-                    padding: [45, 45],
-                    maxZoom: isBng ? 10 : 15,
-                    animate: true,
-                    duration: 0.5,
-                });
-            }
+        } catch (e) {
+            // Ignore animation collisions
         }
         prevActiveLegIndexRef.current = activeLegIndex;
     }, [mapReady, activeLegIndex, legs, vertices, isBng]);

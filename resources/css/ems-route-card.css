@@ -964,23 +964,32 @@
 }
 
 /* Ghost Split Bead */
+.ems-ghost-bead-wrapper,
+.ems-ghost-bead,
+.ems-ghost-tooltip {
+    pointer-events: none !important;
+}
+
 .ems-ghost-bead-wrapper {
     background: transparent;
     border: none;
 }
 
 .ems-ghost-bead {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     background: #ffffff;
     border: 2px solid #2563eb;
     border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.45);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: crosshair;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.ems-active-leg-hit-buffer {
+    cursor: crosshair !important;
 }
 
 .ems-ghost-bead:hover {
