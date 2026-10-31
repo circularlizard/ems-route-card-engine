@@ -42,6 +42,12 @@ export function RouteLegCard({
     const endNameInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
+        if (isActive && cardRef.current && typeof cardRef.current.scrollIntoView === 'function') {
+            cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [isActive]);
+
+    useEffect(() => {
         if (!isActive) return;
         if (autoFocusField === 'start' && startNameInputRef.current) {
             startNameInputRef.current.focus();

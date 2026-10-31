@@ -153,7 +153,12 @@ export function RouteLegTable({
                                                 type="button"
                                                 className="ems-btn-xs"
                                                 title="Merge with next leg"
-                                                onClick={() => onMergeLeg(idx)}
+                                                onClick={() => {
+                                                    const cpName = leg.end_name || `Checkpoint ${idx + 1}`;
+                                                    if (window.confirm(`Merge Leg ${idx + 1} with Leg ${idx + 2} (deletes checkpoint "${cpName}")?`)) {
+                                                        onMergeLeg(idx);
+                                                    }
+                                                }}
                                             >
                                                 <FontAwesomeIcon icon={faCodeMerge} />
                                             </button>

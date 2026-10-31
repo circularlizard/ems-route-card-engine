@@ -245,6 +245,15 @@ export function RouteMap({
         if (!map || !group || vertices.length < 2) return;
         if (isDraggingRef.current) return;
 
+        // Clean up any dangling ghost marker reference from prior leg
+        if (ghostMarkerRef.current) {
+            try {
+                group.removeLayer(ghostMarkerRef.current);
+            } catch (e) {}
+            ghostMarkerRef.current = null;
+        }
+        currentSnappedVertexRef.current = null;
+
         group.clearLayers();
 
         // 1. Draw Background Inactive Legs
@@ -264,6 +273,14 @@ export function RouteMap({
             if (!isActive) {
                 const isHovered = hoveredLegIndex !== undefined && hoveredLegIndex !== null && idx === hoveredLegIndex;
 
+                const handleInactiveClick = (e: L.LeafletMouseEvent) => {
+                    if (e.originalEvent) {
+                        L.DomEvent.preventDefault(e.originalEvent);
+                        L.DomEvent.stopPropagation(e.originalEvent);
+                    }
+                    callbacksRef.current.onSelectLeg(idx);
+                };
+
                 // Wide transparent buffer line (24px) so users can easily click near the leg to select it
                 const hitBuffer = L.polyline(legPts, {
                     weight: 24,
@@ -271,7 +288,7 @@ export function RouteMap({
                     lineCap: 'round',
                     lineJoin: 'round',
                 });
-                hitBuffer.on('click', () => callbacksRef.current.onSelectLeg(idx));
+                hitBuffer.on('click', handleInactiveClick);
                 group.addLayer(hitBuffer);
 
                 // High-contrast white casing underlay so dashes pop vividly over grey contour and terrain shading
@@ -286,13 +303,13 @@ export function RouteMap({
                 group.addLayer(casingLine);
 
                 const inactiveLine = L.polyline(legPts, {
-                    color: isHovered ? '#2563eb' : '#7c3aed',
+                    color: isHovered ? '#9333ea' : '#7c3aed',
                     weight: isHovered ? 6 : 4,
                     opacity: 1.0,
-                    dashArray: isHovered ? undefined : '6, 6',
+                    dashArray: isHovered ? '4, 4' : '6, 6',
                 });
 
-                inactiveLine.on('click', () => callbacksRef.current.onSelectLeg(idx));
+                inactiveLine.on('click', handleInactiveClick);
                 group.addLayer(inactiveLine);
             }
         });
@@ -369,7 +386,11 @@ export function RouteMap({
                             ghostMarkerRef.current.setLatLng([v.lat, v.lon]);
                             ghostMarkerRef.current.setTooltipContent(tooltipHtml);
                         }
-                        callbacksRef.current.onHoverVertex?.(snapped);
+                        // Hide any red hover marker because the Ghost Bead is the active cursor
+                        if (hoverMarkerRef.current) {
+                            map.removeLayer(hoverMarkerRef.current);
+                            hoverMarkerRef.current = null;
+                        }
                         callbacksRef.current.onGhostHoverVertex?.(snapped);
                     }
                 };
@@ -381,7 +402,6 @@ export function RouteMap({
                         ghostMarkerRef.current = null;
                     }
                     currentSnappedVertexRef.current = null;
-                    callbacksRef.current.onHoverVertex?.(null);
                     callbacksRef.current.onGhostHoverVertex?.(null);
                 };
 
@@ -437,12 +457,28 @@ export function RouteMap({
 
             const isStart = idx === 0;
             const badgeText = isStart ? 'S' : `${idx}`;
-            const badgeBg = isStart ? '#10b981' : '#3b82f6';
             const isIntermediate = !isStart;
+            const isBoundingActive = idx === activeLegIndex || idx === activeLegIndex + 1;
+
+            let pinClass = 'ems-marker-pin';
+            let badgeBg = '#64748b';
+
+            if (isStart) {
+                badgeBg = '#10b981';
+                if (activeLegIndex === 0) {
+                    pinClass += ' ems-marker-pin--start-active';
+                }
+            } else if (isBoundingActive) {
+                badgeBg = '#2563eb';
+                pinClass += ' ems-marker-pin--active ems-marker-pin--intermediate';
+            } else {
+                badgeBg = '#64748b';
+                pinClass += ' ems-marker-pin--inactive ems-marker-pin--intermediate';
+            }
 
             const icon = L.divIcon({
                 className: 'ems-map-marker',
-                html: `<div class="ems-marker-pin ${isIntermediate ? 'ems-marker-pin--intermediate' : ''}" style="background:${badgeBg};">${badgeText}</div>`,
+                html: `<div class="${pinClass}" style="background:${badgeBg};">${badgeText}</div>`,
                 iconSize: [28, 28],
                 iconAnchor: [14, 14],
             });
@@ -450,7 +486,7 @@ export function RouteMap({
             const marker = L.marker([vStart.lat, vStart.lon], {
                 icon,
                 draggable: isIntermediate,
-                zIndexOffset: isIntermediate ? 500 : 600,
+                zIndexOffset: isIntermediate ? (isBoundingActive ? 750 : 500) : (activeLegIndex === 0 ? 750 : 600),
             });
             checkpointMarkersRef.current.set(idx, marker);
 
@@ -520,7 +556,10 @@ export function RouteMap({
                 });
             } else {
                 // Start marker
-                marker.on('click', () => callbacksRef.current.onSelectLeg(0));
+                marker.on('click', (e) => {
+                    if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+                    callbacksRef.current.onSelectLeg(0);
+                });
             }
 
             group.addLayer(marker);
@@ -529,18 +568,26 @@ export function RouteMap({
             if (idx === legs.length - 1) {
                 const vEnd = vertices[leg.end_vertex_index];
                 if (vEnd) {
+                    const isFinishActive = activeLegIndex === legs.length - 1;
                     const finishIcon = L.divIcon({
                         className: 'ems-map-marker',
-                        html: `<div class="ems-marker-pin ems-marker-pin--finish">F</div>`,
+                        html: `<div class="ems-marker-pin ems-marker-pin--finish ${isFinishActive ? 'ems-marker-pin--finish-active' : ''}">F</div>`,
                         iconSize: [28, 28],
                         iconAnchor: [14, 14],
                     });
-                    const finishMarker = L.marker([vEnd.lat, vEnd.lon], { icon: finishIcon, draggable: false });
+                    const finishMarker = L.marker([vEnd.lat, vEnd.lon], {
+                        icon: finishIcon,
+                        draggable: false,
+                        zIndexOffset: isFinishActive ? 750 : 600,
+                    });
                     finishMarker.bindTooltip(`<b>${leg.end_name} (Finish)</b><br/>${vEnd.grid_ref_6} (${vEnd.ele_dem}m)`, {
                         direction: 'top',
                         offset: [0, -10],
                     });
-                    finishMarker.on('click', () => callbacksRef.current.onSelectLeg(idx));
+                    finishMarker.on('click', (e) => {
+                        if (e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+                        callbacksRef.current.onSelectLeg(idx);
+                    });
                     group.addLayer(finishMarker);
                 }
             }
@@ -682,7 +729,25 @@ export function RouteMap({
         const map = mapInstanceRef.current;
         if (!map) return;
 
-        if (hoveredVertexIndex !== null && hoveredVertexIndex !== undefined && vertices[hoveredVertexIndex]) {
+        const activeLeg = legs[activeLegIndex];
+        const isHoverInActiveLeg =
+            activeLeg &&
+            hoveredVertexIndex !== null &&
+            hoveredVertexIndex !== undefined &&
+            hoveredVertexIndex >= activeLeg.start_vertex_index &&
+            hoveredVertexIndex <= activeLeg.end_vertex_index;
+
+        const hasGhostActive =
+            ghostMarkerRef.current !== null ||
+            (ghostSplitVertexIndex !== null && ghostSplitVertexIndex !== undefined);
+
+        if (
+            hoveredVertexIndex !== null &&
+            hoveredVertexIndex !== undefined &&
+            vertices[hoveredVertexIndex] &&
+            !hasGhostActive &&
+            !isHoverInActiveLeg
+        ) {
             const v = vertices[hoveredVertexIndex];
             if (!hoverMarkerRef.current) {
                 hoverMarkerRef.current = L.circleMarker([v.lat, v.lon], {
@@ -699,7 +764,7 @@ export function RouteMap({
             map.removeLayer(hoverMarkerRef.current);
             hoverMarkerRef.current = null;
         }
-    }, [mapReady, hoveredVertexIndex, vertices]);
+    }, [mapReady, hoveredVertexIndex, vertices, activeLegIndex, legs, ghostSplitVertexIndex]);
 
     const fitEntireRoute = () => {
         const map = mapInstanceRef.current;

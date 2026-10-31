@@ -341,6 +341,13 @@ export function RouteCardBuilder({
 
     const handleDeleteCheckpoint = (checkpointIdx: number) => {
         if (checkpointIdx < 1 || checkpointIdx >= legs.length) return;
+        const legA = legs[checkpointIdx - 1];
+        const legB = legs[checkpointIdx];
+        const cpName = legA?.end_name || legB?.start_name || `Checkpoint ${checkpointIdx}`;
+        const confirmed = window.confirm(
+            `Delete checkpoint "${cpName}" and merge Leg ${checkpointIdx} with Leg ${checkpointIdx + 1}?`
+        );
+        if (!confirmed) return;
         handleMergeLeg(checkpointIdx - 1);
     };
 
@@ -366,6 +373,8 @@ export function RouteCardBuilder({
 
     const handleSelectLeg = useCallback((idx: number) => {
         setActiveLegIndex(idx);
+        setHoveredVertexIndex(null);
+        setGhostSplitVertexIndex(null);
     }, []);
 
     const handleHoverVertex = useCallback((vIdx: number | null) => {

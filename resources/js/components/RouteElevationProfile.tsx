@@ -193,6 +193,31 @@ export function RouteElevationProfile({
         if (onGhostHoverVertex) onGhostHoverVertex(null);
     };
 
+    const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const clientX = e.clientX - rect.left;
+        const svgX = (clientX / rect.width) * width;
+        if (svgX < paddingLeft || svgX > width - paddingRight) return;
+        const targetDistM = ((svgX - paddingLeft) / plotWidth) * totalDistM;
+
+        for (let i = 0; i < legs.length; i++) {
+            const leg = legs[i];
+            const vStart = vertices[leg.start_vertex_index];
+            const vEnd = vertices[leg.end_vertex_index];
+            if (vStart && vEnd && targetDistM >= vStart.dist_from_start_m && targetDistM <= vEnd.dist_from_start_m) {
+                if (i === activeLegIndex) {
+                    if (ghostSplitVertexIndex !== null && ghostSplitVertexIndex !== undefined) {
+                        onRequestSplitAtVertex?.(ghostSplitVertexIndex);
+                    }
+                } else {
+                    onSelectLeg(i);
+                }
+                break;
+            }
+        }
+    };
+
     const lastLeg = legs[legs.length - 1];
 
     return (
@@ -210,6 +235,7 @@ export function RouteElevationProfile({
                 className="ems-elevation-profile-svg"
                 onPointerMove={handlePointerMove}
                 onPointerLeave={handlePointerLeave}
+                onClick={handleSvgClick}
             >
                 <defs>
                     <linearGradient id="activeLegGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -554,7 +580,10 @@ export function RouteElevationProfile({
                 })()}
 
                 {/* Scrubbing Hover Crosshair & Red Dot matching map marker */}
-                {hoveredVertexIndex !== null && hoveredVertexIndex !== undefined && vertices[hoveredVertexIndex] && (() => {
+                {hoveredVertexIndex !== null &&
+                    hoveredVertexIndex !== undefined &&
+                    vertices[hoveredVertexIndex] &&
+                    (ghostSplitVertexIndex === null || ghostSplitVertexIndex === undefined) && (() => {
                     const hVertex = vertices[hoveredVertexIndex];
                     const hx = getX(hVertex.dist_from_start_m);
                     const hy = getY(hVertex.ele_dem);
