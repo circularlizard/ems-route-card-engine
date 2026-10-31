@@ -943,6 +943,98 @@
     background: #ef4444 !important;
 }
 
+.ems-marker-pin--intermediate {
+    cursor: grab;
+    transition: transform 0.1s ease;
+}
+
+.ems-marker-pin--intermediate:hover {
+    transform: scale(1.15);
+}
+
+.ems-marker-pin--intermediate:active,
+.ems-dragging-map .ems-marker-pin--intermediate {
+    cursor: grabbing !important;
+    transform: scale(1.2);
+}
+
+.ems-dragging-map,
+.ems-dragging-map * {
+    cursor: grabbing !important;
+}
+
+/* Ghost Split Bead */
+.ems-ghost-bead-wrapper {
+    background: transparent;
+    border: none;
+}
+
+.ems-ghost-bead {
+    width: 22px;
+    height: 22px;
+    background: #ffffff;
+    border: 2px solid #2563eb;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.ems-ghost-bead:hover {
+    transform: scale(1.2);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.6);
+}
+
+.ems-ghost-plus {
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1;
+    color: #2563eb;
+    user-select: none;
+}
+
+.ems-ghost-tooltip {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+
+/* Subtle Map Interaction Hint */
+.ems-map-interaction-hint {
+    font-size: 11px;
+    color: #64748b;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    user-select: none;
+    line-height: 1.4;
+}
+
+/* Draggable elevation checkpoint marker line/circle */
+.ems-elevation-checkpoint-marker--draggable {
+    cursor: ew-resize;
+}
+
+.ems-elevation-checkpoint-marker--draggable:hover circle {
+    stroke-width: 3;
+    stroke: #2563eb;
+}
+
+.ems-elevation-ghost-split {
+    cursor: crosshair;
+}
+
 /* Elevation Profile SVG */
 .ems-elevation-profile-container {
     background: #ffffff;

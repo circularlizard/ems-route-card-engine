@@ -207,6 +207,151 @@ export function splitLegAtVertex(
 }
 
 /**
+ * Finds the index of the nearest trackpoint in vertices strictly between minIndex and maxIndex,
+ * enforcing a buffer (default 5 points or 100m) from both ends.
+ */
+export function findNearestTrackPointIndex(
+    vertices: RouteVertex[],
+    latlng: { lat: number; lng: number } | { lat: number; lon: number },
+    minIndex: number,
+    maxIndex: number,
+    minBufferPoints: number = 5,
+    minBufferMeters: number = 100
+): number | null {
+    if (!vertices || vertices.length === 0 || minIndex >= maxIndex) {
+        return null;
+    }
+
+    const targetLat = latlng.lat;
+    const targetLng = 'lng' in latlng ? latlng.lng : (latlng as { lon: number }).lon;
+
+    // Determine initial index bounds using the point buffer
+    let startIdx = minIndex + minBufferPoints;
+    let endIdx = maxIndex - minBufferPoints;
+
+    // If point buffer is too large for this segment, fall back to at least 1 point separation
+    if (startIdx > endIdx) {
+        startIdx = minIndex + 1;
+        endIdx = maxIndex - 1;
+        if (startIdx > endIdx) {
+            return null;
+        }
+    }
+
+    // Apply distance buffer if vertices have dist_from_start_m
+    const minVertex = vertices[minIndex];
+    const maxVertex = vertices[maxIndex];
+    if (minVertex && maxVertex) {
+        const startDist = minVertex.dist_from_start_m;
+        const endDist = maxVertex.dist_from_start_m;
+        const totalDist = endDist - startDist;
+
+        // If the segment is long enough to respect minBufferMeters on both ends:
+        if (totalDist >= minBufferMeters * 2) {
+            while (startIdx < endIdx && vertices[startIdx] && (vertices[startIdx].dist_from_start_m - startDist) < minBufferMeters) {
+                startIdx++;
+            }
+            while (endIdx > startIdx && vertices[endIdx] && (endDist - vertices[endIdx].dist_from_start_m) < minBufferMeters) {
+                endIdx--;
+            }
+        }
+    }
+
+    if (startIdx > endIdx) {
+        startIdx = Math.min(minIndex + 1, Math.floor((minIndex + maxIndex) / 2));
+        endIdx = Math.max(startIdx, Math.min(maxIndex - 1, Math.ceil((minIndex + maxIndex) / 2)));
+    }
+
+    let closestIdx: number | null = null;
+    let minDistanceSq = Infinity;
+    const latRad = (targetLat * Math.PI) / 180;
+    const cosLat = Math.cos(latRad);
+
+    for (let i = startIdx; i <= endIdx; i++) {
+        const v = vertices[i];
+        if (!v) continue;
+        const dLat = v.lat - targetLat;
+        const dLon = (v.lon - targetLng) * cosLat;
+        const distSq = dLat * dLat + dLon * dLon;
+        if (distSq < minDistanceSq) {
+            minDistanceSq = distSq;
+            closestIdx = i;
+        }
+    }
+
+    return closestIdx;
+}
+
+/**
+ * Moves an existing intermediate checkpoint marker (1 to legs.length - 1) to a new vertex index.
+ * Preserves custom checkpoint names, descriptions, escape routes, rest times, and notes
+ * while recalculating spatial metrics for the two adjacent legs.
+ */
+export function moveCheckpointToVertex(
+    vertices: RouteVertex[],
+    legs: RouteLeg[],
+    checkpointIndex: number, // 1 <= checkpointIndex < legs.length
+    newVertexIdx: number
+): RouteLeg[] {
+    if (checkpointIndex < 1 || checkpointIndex >= legs.length) {
+        return legs;
+    }
+
+    const prevLegIdx = checkpointIndex - 1;
+    const nextLegIdx = checkpointIndex;
+    const legA = legs[prevLegIdx];
+    const legB = legs[nextLegIdx];
+
+    if (!legA || !legB) {
+        return legs;
+    }
+
+    // Ensure newVertexIdx is strictly between the start of legA and the end of legB
+    if (newVertexIdx <= legA.start_vertex_index || newVertexIdx >= legB.end_vertex_index) {
+        return legs;
+    }
+
+    // Preserve custom checkpoint name (legA.end_name / legB.start_name)
+    const checkpointName = legA.end_name || legB.start_name || `Checkpoint ${checkpointIndex + 1}`;
+
+    const newLegA = buildLegFromVertices(
+        vertices,
+        legA.start_vertex_index,
+        newVertexIdx,
+        legA.leg_number,
+        legA.start_name,
+        checkpointName,
+        legA.route_description,
+        legA.escape_route,
+        legA.activity_notes,
+        legA.rest_minutes,
+        legA.activity_minutes
+    );
+    newLegA.flat_override = legA.flat_override;
+
+    const newLegB = buildLegFromVertices(
+        vertices,
+        newVertexIdx,
+        legB.end_vertex_index,
+        legB.leg_number,
+        checkpointName,
+        legB.end_name,
+        legB.route_description,
+        legB.escape_route,
+        legB.activity_notes,
+        legB.rest_minutes,
+        legB.activity_minutes
+    );
+    newLegB.flat_override = legB.flat_override;
+
+    const updatedLegs = [...legs];
+    updatedLegs[prevLegIdx] = newLegA;
+    updatedLegs[nextLegIdx] = newLegB;
+
+    return updatedLegs;
+}
+
+/**
  * Merges a leg with the immediately following leg.
  */
 export function mergeLegsWithNext(

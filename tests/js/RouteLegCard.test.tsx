@@ -111,4 +111,19 @@ describe('RouteLegCard Checkpoint Vector & Editing Behavior', () => {
             })
         );
     });
+
+    it('does not render "Split Leg" or "Merge with Next" buttons in the card header', () => {
+        render(
+            <RouteLegCard
+                leg={mockLeg1}
+                isActive={true}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        expect(screen.queryByRole('button', { name: /Split Leg/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Merge with Next/i })).not.toBeInTheDocument();
+    });
 });

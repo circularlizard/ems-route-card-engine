@@ -152,4 +152,19 @@ describe('RouteMap Component', () => {
         fireEvent.click(osBtn);
         expect(osBtn).toHaveClass('ems-map-btn--active');
     });
+
+    it('renders the subtle map interaction hint', () => {
+        render(
+            <RouteMap
+                vertices={mockVertices}
+                legs={mockLegs}
+                activeLegIndex={0}
+                onSelectLeg={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText(/Tip: Hover active leg on map to split/i)).toBeInTheDocument();
+        expect(screen.getByText(/Drag checkpoints to move/i)).toBeInTheDocument();
+        expect(screen.getByText(/Right-click checkpoint to delete/i)).toBeInTheDocument();
+    });
 });

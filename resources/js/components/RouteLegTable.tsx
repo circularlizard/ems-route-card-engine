@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faScissors,
     faCodeMerge,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg } from '../types/route-card';
@@ -12,7 +11,7 @@ interface RouteLegTableProps {
     activeLegIndex: number;
     onSelectLeg: (legIndex: number) => void;
     onUpdateLeg: (legIndex: number, updatedLeg: RouteLeg) => void;
-    onSplitLeg: (legIndex: number) => void;
+    onSplitLeg?: (legIndex: number) => void;
     onMergeLeg: (legIndex: number) => void;
 }
 
@@ -21,7 +20,7 @@ export function RouteLegTable({
     activeLegIndex,
     onSelectLeg,
     onUpdateLeg,
-    onSplitLeg,
+    onSplitLeg: _onSplitLeg,
     onMergeLeg,
 }: RouteLegTableProps) {
     const handleTextChange = (legIndex: number, field: keyof RouteLeg, value: string | number) => {
@@ -149,14 +148,6 @@ export function RouteLegTable({
                                 </td>
                                 <td className="ems-text-center" onClick={(e) => e.stopPropagation()}>
                                     <div className="ems-table-actions">
-                                        <button
-                                            type="button"
-                                            className="ems-btn-xs"
-                                            title="Split leg at midpoint"
-                                            onClick={() => onSplitLeg(idx)}
-                                        >
-                                            <FontAwesomeIcon icon={faScissors} />
-                                        </button>
                                         {!isLast && (
                                             <button
                                                 type="button"

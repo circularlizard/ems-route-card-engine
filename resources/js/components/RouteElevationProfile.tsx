@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { RouteLeg, RouteVertex } from '../types/route-card';
+import { findNearestTrackPointIndex } from '../utils/route-calculations';
 
 interface RouteElevationProfileProps {
     vertices: RouteVertex[];
@@ -8,6 +9,13 @@ interface RouteElevationProfileProps {
     hoveredVertexIndex?: number | null;
     onSelectLeg: (legIndex: number) => void;
     onHoverVertex?: (vertexIndex: number | null) => void;
+    onRequestSplitAtVertex?: (vertexIndex: number) => void;
+    onMoveCheckpoint?: (checkpointIdx: number, newVertexIdx: number) => void;
+    onDeleteCheckpoint?: (checkpointIdx: number) => void;
+    ghostSplitVertexIndex?: number | null;
+    onGhostHoverVertex?: (vertexIdx: number | null) => void;
+    draggingCheckpoint?: { checkpointIndex: number; vertexIndex: number } | null;
+    onDragCheckpointChange?: (dragging: { checkpointIndex: number; vertexIndex: number } | null) => void;
 }
 
 export function RouteElevationProfile({
@@ -17,8 +25,18 @@ export function RouteElevationProfile({
     hoveredVertexIndex,
     onSelectLeg,
     onHoverVertex,
+    onRequestSplitAtVertex,
+    onMoveCheckpoint,
+    onDeleteCheckpoint,
+    ghostSplitVertexIndex,
+    onGhostHoverVertex,
+    draggingCheckpoint,
+    onDragCheckpointChange,
 }: RouteElevationProfileProps) {
     const svgRef = useRef<SVGSVGElement | null>(null);
+    const [localDraggingCheckpoint, setLocalDraggingCheckpoint] = useState<{ checkpointIndex: number; vertexIndex: number } | null>(null);
+
+    const activeDragging = localDraggingCheckpoint || draggingCheckpoint;
 
     if (vertices.length < 2) {
         return null;
@@ -92,7 +110,7 @@ export function RouteElevationProfile({
 
     // Handle mouse/touch scrub
     const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-        if (!svgRef.current || !onHoverVertex) return;
+        if (!svgRef.current) return;
         const rect = svgRef.current.getBoundingClientRect();
         const rectWidth = rect.width > 0 ? rect.width : width;
 
@@ -101,6 +119,38 @@ export function RouteElevationProfile({
         const svgX = (e.clientX - rect.left) * scaleX;
         const ratio = Math.max(0, Math.min(1.0, (svgX - paddingLeft) / plotWidth));
         const targetDistM = ratio * totalDistM;
+
+        if (localDraggingCheckpoint) {
+            const k = localDraggingCheckpoint.checkpointIndex;
+            const minIdx = legs[k - 1]?.start_vertex_index ?? 0;
+            const maxIdx = legs[k]?.end_vertex_index ?? vertices.length - 1;
+
+            let closestIdx = minIdx;
+            let minDiff = Infinity;
+            for (let i = minIdx; i <= maxIdx; i++) {
+                if (!vertices[i]) continue;
+                const diff = Math.abs(vertices[i].dist_from_start_m - targetDistM);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIdx = i;
+                }
+            }
+
+            const snapped = findNearestTrackPointIndex(
+                vertices,
+                { lat: vertices[closestIdx].lat, lon: vertices[closestIdx].lon },
+                minIdx,
+                maxIdx,
+                5,
+                100
+            );
+
+            if (snapped !== null && snapped !== localDraggingCheckpoint.vertexIndex) {
+                setLocalDraggingCheckpoint({ checkpointIndex: k, vertexIndex: snapped });
+                onDragCheckpointChange?.({ checkpointIndex: k, vertexIndex: snapped });
+            }
+            return;
+        }
 
         let closestIdx = 0;
         let minDiff = Infinity;
@@ -112,11 +162,35 @@ export function RouteElevationProfile({
             }
         }
 
-        onHoverVertex(closestIdx);
+        onHoverVertex?.(closestIdx);
+
+        const currentActiveLeg = legs[activeLegIndex];
+        if (
+            currentActiveLeg &&
+            closestIdx > currentActiveLeg.start_vertex_index &&
+            closestIdx < currentActiveLeg.end_vertex_index
+        ) {
+            const snappedGhost = findNearestTrackPointIndex(
+                vertices,
+                { lat: vertices[closestIdx].lat, lon: vertices[closestIdx].lon },
+                currentActiveLeg.start_vertex_index,
+                currentActiveLeg.end_vertex_index,
+                5,
+                100
+            );
+            if (snappedGhost !== null) {
+                onGhostHoverVertex?.(snappedGhost);
+            } else {
+                onGhostHoverVertex?.(null);
+            }
+        } else {
+            onGhostHoverVertex?.(null);
+        }
     };
 
     const handlePointerLeave = () => {
         if (onHoverVertex) onHoverVertex(null);
+        if (onGhostHoverVertex) onGhostHoverVertex(null);
     };
 
     const lastLeg = legs[legs.length - 1];
@@ -218,7 +292,16 @@ export function RouteElevationProfile({
 
                 {/* Active Leg Highlight Area */}
                 {activeLegFillPath && (
-                    <path d={activeLegFillPath} fill="url(#activeLegGrad)" />
+                    <path
+                        d={activeLegFillPath}
+                        fill="url(#activeLegGrad)"
+                        style={{ cursor: 'crosshair' }}
+                        onClick={() => {
+                            if (ghostSplitVertexIndex !== null && ghostSplitVertexIndex !== undefined) {
+                                onRequestSplitAtVertex?.(ghostSplitVertexIndex);
+                            }
+                        }}
+                    />
                 )}
 
                 {/* Main Profile Line for the ENTIRE route */}
@@ -253,7 +336,12 @@ export function RouteElevationProfile({
 
                 {/* Checkpoint Markers (Start of each leg) */}
                 {legs.map((leg, idx) => {
-                    const v = vertices[leg.start_vertex_index];
+                    const isStart = idx === 0;
+                    const effectiveVertexIdx =
+                        !isStart && activeDragging?.checkpointIndex === idx
+                            ? activeDragging.vertexIndex
+                            : leg.start_vertex_index;
+                    const v = vertices[effectiveVertexIdx];
                     if (!v) return null;
                     const cx = getX(v.dist_from_start_m);
                     const cy = getY(v.ele_dem);
@@ -262,9 +350,59 @@ export function RouteElevationProfile({
                     return (
                         <g
                             key={idx}
-                            className="ems-elevation-checkpoint-marker"
-                            onClick={() => onSelectLeg(idx)}
-                            style={{ cursor: 'pointer' }}
+                            className={`ems-elevation-checkpoint-marker ${!isStart ? 'ems-elevation-checkpoint-marker--draggable' : ''}`}
+                            onPointerDown={
+                                !isStart
+                                    ? (e) => {
+                                          if (e.button === 2 || e.altKey) return;
+                                          e.stopPropagation();
+                                          (e.currentTarget as Element).setPointerCapture(e.pointerId);
+                                          setLocalDraggingCheckpoint({
+                                              checkpointIndex: idx,
+                                              vertexIndex: effectiveVertexIdx,
+                                          });
+                                          onDragCheckpointChange?.({
+                                              checkpointIndex: idx,
+                                              vertexIndex: effectiveVertexIdx,
+                                          });
+                                      }
+                                    : undefined
+                            }
+                            onPointerUp={
+                                !isStart
+                                    ? (e) => {
+                                          (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+                                          if (
+                                              localDraggingCheckpoint &&
+                                              localDraggingCheckpoint.checkpointIndex === idx
+                                          ) {
+                                              if (localDraggingCheckpoint.vertexIndex !== leg.start_vertex_index) {
+                                                  onMoveCheckpoint?.(idx, localDraggingCheckpoint.vertexIndex);
+                                              }
+                                          }
+                                          setLocalDraggingCheckpoint(null);
+                                          onDragCheckpointChange?.(null);
+                                      }
+                                    : undefined
+                            }
+                            onContextMenu={
+                                !isStart
+                                    ? (e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          onDeleteCheckpoint?.(idx);
+                                      }
+                                    : undefined
+                            }
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isStart && e.altKey) {
+                                    onDeleteCheckpoint?.(idx);
+                                } else {
+                                    onSelectLeg(idx);
+                                }
+                            }}
+                            style={{ cursor: !isStart ? 'ew-resize' : 'pointer' }}
                         >
                             <line
                                 x1={cx}
@@ -272,12 +410,12 @@ export function RouteElevationProfile({
                                 x2={cx}
                                 y2={height - paddingBottom}
                                 stroke={isActive ? '#2563eb' : '#cbd5e1'}
-                                strokeWidth={isActive ? '2' : '1'}
+                                strokeWidth={isActive ? '2' : '1.5'}
                             />
                             <circle
                                 cx={cx}
                                 cy={cy}
-                                r={isActive ? 5.5 : 4}
+                                r={isActive ? 6 : 4.5}
                                 fill={isActive ? '#2563eb' : '#ffffff'}
                                 stroke={isActive ? '#ffffff' : '#64748b'}
                                 strokeWidth="2"
@@ -337,6 +475,80 @@ export function RouteElevationProfile({
                             >
                                 F
                             </text>
+                        </g>
+                    );
+                })()}
+
+                {/* Ghost Split Line & Tooltip */}
+                {ghostSplitVertexIndex !== null && ghostSplitVertexIndex !== undefined && vertices[ghostSplitVertexIndex] && activeLeg && (() => {
+                    const gv = vertices[ghostSplitVertexIndex];
+                    const gx = getX(gv.dist_from_start_m);
+                    const gy = getY(gv.ele_dem);
+                    const vStart = vertices[activeLeg.start_vertex_index];
+                    const vEnd = vertices[activeLeg.end_vertex_index];
+                    const dist1 = ((gv.dist_from_start_m - vStart.dist_from_start_m) / 1000).toFixed(2);
+                    const dist2 = ((vEnd.dist_from_start_m - gv.dist_from_start_m) / 1000).toFixed(2);
+                    const tooltipLabel = `+ Split here • ${dist1} km | ${dist2} km (${gv.grid_ref_6} · ${Math.round(gv.ele_dem)}m)`;
+
+                    return (
+                        <g
+                            key="ghost-split-indicator"
+                            className="ems-elevation-ghost-split"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onRequestSplitAtVertex?.(ghostSplitVertexIndex);
+                            }}
+                            style={{ cursor: 'crosshair' }}
+                        >
+                            <line
+                                x1={gx}
+                                y1={paddingTop}
+                                x2={gx}
+                                y2={height - paddingBottom}
+                                stroke="#2563eb"
+                                strokeWidth="2"
+                                strokeDasharray="4,4"
+                                opacity="0.85"
+                            />
+                            <circle
+                                cx={gx}
+                                cy={gy}
+                                r={8}
+                                fill="#ffffff"
+                                stroke="#2563eb"
+                                strokeWidth="2.5"
+                            />
+                            <text
+                                x={gx}
+                                y={gy + 3.5}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fontWeight="bold"
+                                fill="#2563eb"
+                            >
+                                +
+                            </text>
+                            <g transform={`translate(${Math.max(90, Math.min(width - 90, gx))}, ${Math.max(paddingTop + 14, gy - 16)})`}>
+                                <rect
+                                    x="-85"
+                                    y="-12"
+                                    width="170"
+                                    height="20"
+                                    rx="4"
+                                    fill="#0f172a"
+                                    opacity="0.9"
+                                />
+                                <text
+                                    x="0"
+                                    y="2"
+                                    textAnchor="middle"
+                                    fontSize="9"
+                                    fill="#ffffff"
+                                    fontWeight="600"
+                                >
+                                    {tooltipLabel}
+                                </text>
+                            </g>
                         </g>
                     );
                 })()}

@@ -20,6 +20,7 @@ import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff } from '../ty
 import {
     splitLegAtVertex,
     mergeLegsWithNext,
+    moveCheckpointToVertex,
     reconcileReimport,
     formatHoursMins,
 } from '../utils/route-calculations';
@@ -64,6 +65,9 @@ export function RouteCardBuilder({
     const [expandAllLegs, setExpandAllLegs] = useState(false);
     const [recentlySplitIndex, setRecentlySplitIndex] = useState<number | null>(null);
     const [isMobileStepper, setIsMobileStepper] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 1024 : false));
+    const [ghostSplitVertexIndex, setGhostSplitVertexIndex] = useState<number | null>(null);
+    const [draggingCheckpoint, setDraggingCheckpoint] = useState<{ checkpointIndex: number; vertexIndex: number } | null>(null);
+    const [autoFocusSplitField, setAutoFocusSplitField] = useState<'start' | 'end' | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -301,7 +305,7 @@ export function RouteCardBuilder({
         setPendingReimport(null);
     };
 
-    // Leg Splitting and Merging
+    // Leg Splitting, Checkpoint Moving and Merging
     const handleSplitLeg = (legIdx: number, splitVertexIdx?: number) => {
         const leg = legs[legIdx];
         if (!leg) return;
@@ -315,10 +319,29 @@ export function RouteCardBuilder({
             legs: updated,
             undoStack: [...undoStack, legs],
         });
-        setActiveLegIndex(legIdx);
+        setActiveLegIndex(legIdx + 1);
         setRecentlySplitIndex(legIdx + 1);
+        setAutoFocusSplitField('start');
         setTimeout(() => setRecentlySplitIndex(null), 2500);
+        setTimeout(() => setAutoFocusSplitField(null), 1000);
         setStatusMessage({ text: `Leg ${leg.leg_number} split into two legs.`, type: 'success' });
+    };
+
+    const handleMoveCheckpoint = (checkpointIdx: number, newVertexIdx: number) => {
+        const updated = moveCheckpointToVertex(vertices, legs, checkpointIdx, newVertexIdx);
+        updateActiveDay({
+            legs: updated,
+            undoStack: [...undoStack, legs],
+        });
+        setStatusMessage({
+            text: `Checkpoint moved to ${vertices[newVertexIdx]?.grid_ref_6 || 'new position'}.`,
+            type: 'success',
+        });
+    };
+
+    const handleDeleteCheckpoint = (checkpointIdx: number) => {
+        if (checkpointIdx < 1 || checkpointIdx >= legs.length) return;
+        handleMergeLeg(checkpointIdx - 1);
     };
 
     const handleMergeLeg = (legIdx: number) => {
@@ -625,6 +648,12 @@ export function RouteCardBuilder({
                             activeLegIndex={activeLegIndex}
                             onSelectLeg={(idx) => setActiveLegIndex(idx)}
                             onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
+                            onMoveCheckpoint={handleMoveCheckpoint}
+                            onDeleteCheckpoint={handleDeleteCheckpoint}
+                            ghostSplitVertexIndex={ghostSplitVertexIndex}
+                            onGhostHoverVertex={(vIdx) => setGhostSplitVertexIndex(vIdx)}
+                            draggingCheckpoint={draggingCheckpoint}
+                            onDragCheckpointChange={(drag) => setDraggingCheckpoint(drag)}
                             osMapsApiKey={osMapsApiKey}
                             hoveredVertexIndex={hoveredVertexIndex}
                             onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
@@ -638,6 +667,13 @@ export function RouteCardBuilder({
                             hoveredVertexIndex={hoveredVertexIndex}
                             onSelectLeg={(idx) => setActiveLegIndex(idx)}
                             onHoverVertex={(vIdx) => setHoveredVertexIndex(vIdx)}
+                            onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
+                            onMoveCheckpoint={handleMoveCheckpoint}
+                            onDeleteCheckpoint={handleDeleteCheckpoint}
+                            ghostSplitVertexIndex={ghostSplitVertexIndex}
+                            onGhostHoverVertex={(vIdx) => setGhostSplitVertexIndex(vIdx)}
+                            draggingCheckpoint={draggingCheckpoint}
+                            onDragCheckpointChange={(drag) => setDraggingCheckpoint(drag)}
                         />
                     </div>
 
@@ -735,6 +771,7 @@ export function RouteCardBuilder({
                                         onMergeLeg={() => handleMergeLeg(idx)}
                                         onPrevLeg={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
                                         onNextLeg={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
+                                        autoFocusField={idx === activeLegIndex ? autoFocusSplitField : null}
                                     />
                                 );
                             })}

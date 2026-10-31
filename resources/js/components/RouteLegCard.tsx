@@ -14,10 +14,11 @@ interface RouteLegCardProps {
     onSelect: () => void;
     onHoverLeg?: (isHovered: boolean) => void;
     onUpdateLeg: (updatedLeg: RouteLeg) => void;
-    onSplitLeg: () => void;
-    onMergeLeg: () => void;
+    onSplitLeg?: () => void;
+    onMergeLeg?: () => void;
     onPrevLeg?: () => void;
     onNextLeg?: () => void;
+    autoFocusField?: 'start' | 'end' | null;
 }
 
 export function RouteLegCard({
@@ -30,12 +31,26 @@ export function RouteLegCard({
     onSelect,
     onHoverLeg,
     onUpdateLeg,
-    onSplitLeg,
-    onMergeLeg,
+    onSplitLeg: _onSplitLeg,
+    onMergeLeg: _onMergeLeg,
     onPrevLeg,
     onNextLeg,
+    autoFocusField,
 }: RouteLegCardProps) {
     const cardRef = useRef<HTMLDivElement | null>(null);
+    const startNameInputRef = useRef<HTMLInputElement | null>(null);
+    const endNameInputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        if (!isActive) return;
+        if (autoFocusField === 'start' && startNameInputRef.current) {
+            startNameInputRef.current.focus();
+            startNameInputRef.current.select();
+        } else if (autoFocusField === 'end' && endNameInputRef.current) {
+            endNameInputRef.current.focus();
+            endNameInputRef.current.select();
+        }
+    }, [autoFocusField, isActive]);
 
     const startNameId = useId();
     const endNameId = useId();
@@ -221,6 +236,7 @@ export function RouteLegCard({
 
                     <div className="ems-waypoint-col">
                         <input
+                            ref={startNameInputRef}
                             id={startNameId}
                             type="text"
                             className="ems-waypoint-input ems-endpoint-input"
@@ -240,6 +256,7 @@ export function RouteLegCard({
 
                     <div className="ems-waypoint-col">
                         <input
+                            ref={endNameInputRef}
                             id={endNameId}
                             type="text"
                             className="ems-waypoint-input ems-endpoint-input"
@@ -256,7 +273,7 @@ export function RouteLegCard({
                     </div>
                 </div>
 
-                {/* Inline Metadata & Action Sub-bar */}
+                {/* Inline Metadata Sub-bar */}
                 <div className="ems-leg-subbar" onClick={(e) => e.stopPropagation()}>
                     <div className="ems-leg-stats-inline">
                         <span className="ems-stat-num"><b>{leg.distance_km}</b> km</span>
@@ -264,30 +281,6 @@ export function RouteLegCard({
                         <span className="ems-stat-num">{climbDescentStr}</span>
                         <span className="ems-stat-sep">•</span>
                         <span className="ems-stat-num">{formatHoursMins(leg.walking_minutes)} walk</span>
-                    </div>
-
-                    <div className="ems-leg-ghost-actions">
-                        <button
-                            type="button"
-                            className="ems-ghost-link"
-                            title="Split leg at midpoint"
-                            onClick={onSplitLeg}
-                        >
-                            Split Leg
-                        </button>
-                        {!isLastLeg && (
-                            <>
-                                <span className="ems-ghost-sep">•</span>
-                                <button
-                                    type="button"
-                                    className="ems-ghost-link"
-                                    title="Merge with next leg"
-                                    onClick={onMergeLeg}
-                                >
-                                    Merge with Next
-                                </button>
-                            </>
-                        )}
                     </div>
                 </div>
             </div>

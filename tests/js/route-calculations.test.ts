@@ -7,6 +7,8 @@ import {
     buildLegFromVertices,
     splitLegAtVertex,
     mergeLegsWithNext,
+    findNearestTrackPointIndex,
+    moveCheckpointToVertex,
     reconcileReimport,
 } from '../../resources/js/utils/route-calculations';
 import { RouteVertex, RouteLeg, EnrichedRouteData } from '../../resources/js/types/route-card';
@@ -268,5 +270,82 @@ describe('route-calculations utilities', () => {
         expect(getCompassDirection(225)).toBe('SW');
         expect(getCompassDirection(270)).toBe('W');
         expect(getCompassDirection(315)).toBe('NW');
+    });
+
+    it('finds nearest trackpoint index with buffer enforcement', () => {
+        const vertices: RouteVertex[] = [];
+        for (let i = 0; i < 20; i++) {
+            vertices.push({
+                index: i,
+                lat: 55.0 + i * 0.001,
+                lon: -3.0,
+                easting: 300000,
+                northing: 600000 + i * 111,
+                grid_ref_6: `NT 000 ${String(i).padStart(3, '0')}`,
+                grid_ref_8: `NT 0000 ${String(i).padStart(4, '0')}`,
+                ele_dem: 200 + i * 10,
+                dist_from_start_m: i * 111,
+                ascent_from_start_m: i * 10,
+                descent_from_start_m: 0,
+            });
+        }
+
+        // Search between index 0 and 19 with default buffer 5 (range 5 to 14)
+        // Click near vertex 10
+        const nearest = findNearestTrackPointIndex(vertices, { lat: 55.010, lng: -3.0 }, 0, 19, 5, 100);
+        expect(nearest).toBe(10);
+
+        // Click near vertex 1 (within start buffer): should clamp to start buffer (at least 5)
+        const clampedStart = findNearestTrackPointIndex(vertices, { lat: 55.001, lng: -3.0 }, 0, 19, 5, 100);
+        expect(clampedStart).toBeGreaterThanOrEqual(5);
+
+        // Click near vertex 18 (within end buffer): should clamp to end buffer (at most 14)
+        const clampedEnd = findNearestTrackPointIndex(vertices, { lat: 55.018, lng: -3.0 }, 0, 19, 5, 100);
+        expect(clampedEnd).toBeLessThanOrEqual(14);
+    });
+
+    it('moves checkpoint to new vertex preserving custom names and descriptions', () => {
+        const vertices: RouteVertex[] = [];
+        for (let i = 0; i < 20; i++) {
+            vertices.push({
+                index: i,
+                lat: 55.0 + i * 0.001,
+                lon: -3.0,
+                easting: 300000,
+                northing: 600000 + i * 111,
+                grid_ref_6: `NT 000 ${String(i).padStart(3, '0')}`,
+                grid_ref_8: `NT 0000 ${String(i).padStart(4, '0')}`,
+                ele_dem: 200 + i * 10,
+                dist_from_start_m: i * 111,
+                ascent_from_start_m: i * 10,
+                descent_from_start_m: 0,
+            });
+        }
+
+        const leg1 = buildLegFromVertices(vertices, 0, 8, 1, 'Camp 1', 'Fingland Farm', 'Desc 1', 'Escape 1', '', 10);
+        const leg2 = buildLegFromVertices(vertices, 8, 19, 2, 'Fingland Farm', 'Finish Bothy', 'Desc 2', 'Escape 2', '', 20);
+        const legs = [leg1, leg2];
+
+        // Move checkpoint 1 (Fingland Farm) from vertex 8 to vertex 12
+        const updated = moveCheckpointToVertex(vertices, legs, 1, 12);
+        expect(updated.length).toBe(2);
+        expect(updated[0].end_vertex_index).toBe(12);
+        expect(updated[1].start_vertex_index).toBe(12);
+
+        // Custom names preserved
+        expect(updated[0].start_name).toBe('Camp 1');
+        expect(updated[0].end_name).toBe('Fingland Farm');
+        expect(updated[1].start_name).toBe('Fingland Farm');
+        expect(updated[1].end_name).toBe('Finish Bothy');
+
+        // Descriptions and rest preserved
+        expect(updated[0].route_description).toBe('Desc 1');
+        expect(updated[0].rest_minutes).toBe(10);
+        expect(updated[1].route_description).toBe('Desc 2');
+        expect(updated[1].rest_minutes).toBe(20);
+
+        // Distance updated
+        expect(updated[0].distance_km).toBeGreaterThan(leg1.distance_km);
+        expect(updated[1].distance_km).toBeLessThan(leg2.distance_km);
     });
 });
