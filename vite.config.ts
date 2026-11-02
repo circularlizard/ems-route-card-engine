@@ -22,6 +22,7 @@ export default defineConfig({
     build: {
         outDir: 'assets/js',
         emptyOutDir: true,
+        chunkSizeWarningLimit: 1000,
         rollupOptions: {
             input: {
                 'route-card-studio': resolve( __dirname, 'resources/js/standalone/index.tsx' ),
