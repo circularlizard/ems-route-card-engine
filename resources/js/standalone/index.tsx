@@ -43,7 +43,7 @@ export function RouteCardStudio({
     const [currentApiKey, setCurrentApiKey] = useState<string | undefined>(osMapsApiKey);
 
     return (
-        <div className="ems-route-card-studio">
+        <div className="ems-route-card-studio ems-route-studio-wrapper">
             {/* Top-Level Navigation Tabs directly in primary header */}
             {!isShortcode && (
                 <div className="ems-studio-tabs">

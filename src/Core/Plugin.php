@@ -88,7 +88,7 @@ class Plugin {
         }
 
         return sprintf(
-            '<div id="ems-route-card-studio-root" data-expedition="%d" data-team="%d" data-day="%d" data-shortcode="true"></div>',
+            '<div id="ems-route-card-studio-root" class="ems-route-studio-wrapper" data-expedition="%d" data-team="%d" data-day="%d" data-shortcode="true"></div>',
             (int) $a['expedition_id'],
             (int) $a['team_id'],
             (int) $a['day']

@@ -74,7 +74,7 @@ export function RouteLegCard({
     const syncTextareaHeight = (el: HTMLTextAreaElement | null) => {
         if (!el) return;
         el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        el.style.height = `${Math.max(34, el.scrollHeight)}px`;
     };
 
     const isCardExpanded = isExpanded !== undefined ? isExpanded : true;
@@ -295,7 +295,7 @@ export function RouteLegCard({
             </div>
 
             {/* Body Area */}
-            <div className="ems-leg-card__body">
+            <div className="ems-leg-card__body leg-card-body">
                 {/* Route Navigation Description */}
                 <div className="ems-leg-input-block" onClick={(e) => e.stopPropagation()}>
                     <div className="ems-input-label-row">
@@ -324,9 +324,11 @@ export function RouteLegCard({
                 {/* 2-Column Grid: Escape Route + Rest (mins) */}
                 <div className="ems-leg-bottom-row" onClick={(e) => e.stopPropagation()}>
                     <div className="ems-leg-input-block ems-leg-input-block--escape">
-                        <label htmlFor={escapeRouteId} className="ems-field-label">
-                            Escape Route
-                        </label>
+                        <div className="leg-field-label-row">
+                            <label htmlFor={escapeRouteId} className="ems-field-label">
+                                Escape Route
+                            </label>
+                        </div>
                         <textarea
                             ref={escapeRouteRef}
                             id={escapeRouteId}
@@ -340,7 +342,7 @@ export function RouteLegCard({
                     </div>
 
                     <div className="ems-leg-input-block ems-leg-input-block--rest">
-                        <div className="ems-label-with-addon">
+                        <div className="ems-label-with-addon leg-field-label-row">
                             <label htmlFor={restMinsId} className="ems-field-label">
                                 Rest (min)
                             </label>

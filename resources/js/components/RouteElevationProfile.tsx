@@ -231,7 +231,7 @@ export function RouteElevationProfile({
     const lastLeg = legs[legs.length - 1];
 
     return (
-        <div className="ems-elevation-profile-container">
+        <div className="ems-elevation-profile-container elevation-profile-card">
             <div className="ems-elevation-profile-header">
                 <span className="ems-elevation-profile-title">Elevation Profile</span>
                 <span className="ems-elevation-profile-stats">
