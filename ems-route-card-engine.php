@@ -3,7 +3,7 @@
  * Plugin Name: EMS Route Card & Terrain Engine
  * Plugin URI:  https://github.com/circularlizard/ems-route-card-engine
  * Description: Local terrain engine, GPX route card builder, and Naismith calculator for DofE expeditions.
- * Version:     0.1.6
+ * Version:     0.1.7
  * Author:      Expedition Management System Team
  * License:     GPL-2.0-or-later
  * Text Domain: ems-route-card-engine
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'EMS_ROUTE_CARD_VERSION', '0.1.6' );
+define( 'EMS_ROUTE_CARD_VERSION', '0.1.7' );
 define( 'EMS_ROUTE_CARD_FILE', __FILE__ );
 define( 'EMS_ROUTE_CARD_PATH', plugin_dir_path( __FILE__ ) );
 define( 'EMS_ROUTE_CARD_URL', plugin_dir_url( __FILE__ ) );

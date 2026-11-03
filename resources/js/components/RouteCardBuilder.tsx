@@ -36,6 +36,7 @@ interface RouteCardBuilderProps {
     teamId?: number;
     initialDay?: number;
     totalDays?: number;
+    dofeLevel?: 'bronze' | 'silver' | 'gold';
     osMapsApiKey?: string;
     onExportPdf?: (cardId?: number) => void;
 }
@@ -54,6 +55,7 @@ export function RouteCardBuilder({
     teamId = 1,
     initialDay = 1,
     totalDays = 3,
+    dofeLevel,
     osMapsApiKey,
     onExportPdf,
 }: RouteCardBuilderProps) {
@@ -479,6 +481,17 @@ export function RouteCardBuilder({
     const totalProjectRestMins = legs.reduce((acc, l) => acc + (l.rest_minutes || 0), 0);
     const totalExpeditionMins = totalWalkingMins + totalProjectRestMins;
 
+    const resolvedDofeLevel: 'bronze' | 'silver' | 'gold' = (
+        dofeLevel ||
+        ((window as any).emsRouteCardStudioConfig?.dofe_level as any)?.toLowerCase?.() ||
+        'silver'
+    );
+    const minDurationHours = resolvedDofeLevel === 'bronze' ? 6 : resolvedDofeLevel === 'gold' ? 8 : 7;
+    const minDurationMins = minDurationHours * 60;
+
+    const isStopsTooShort = legs.length > 0 && totalExpeditionMins > 0 && (totalProjectRestMins / totalExpeditionMins) < 0.15;
+    const isDurationTooShort = legs.length > 0 && totalExpeditionMins > 0 && totalExpeditionMins < minDurationMins;
+
     return (
         <div className="ems-builder-container">
             {/* Transient Toast Notification */}
@@ -584,6 +597,11 @@ export function RouteCardBuilder({
                         <div className="ems-mobile-stats-header">
                             <span className="ems-mobile-stats-summary">
                                 {totalDistanceKm}km • +{totalAscentM}m • {formatHoursMins(totalExpeditionMins)}
+                                {(isDurationTooShort || isStopsTooShort) && (
+                                    <span className="ems-stat-warning-chip" title={isDurationTooShort ? `Under ${minDurationHours}h minimum` : 'Stops under 15%'}>
+                                        too short
+                                    </span>
+                                )}
                             </span>
                             <button
                                 type="button"
@@ -611,11 +629,25 @@ export function RouteCardBuilder({
                             </div>
                             <div className="ems-stat-pill">
                                 <span className="ems-stat-pill__label">Stops</span>
-                                <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
+                                <span className="ems-stat-pill__val">
+                                    {formatHoursMins(totalProjectRestMins)}
+                                    {isStopsTooShort && (
+                                        <span className="ems-stat-warning-chip" title="Total stops are less than 15% of the total duration">
+                                            too short
+                                        </span>
+                                    )}
+                                </span>
                             </div>
                             <div className="ems-stat-pill ems-stat-pill--highlight">
                                 <span className="ems-stat-pill__label">Total Expedition</span>
-                                <span className="ems-stat-pill__val">{formatHoursMins(totalExpeditionMins)}</span>
+                                <span className="ems-stat-pill__val">
+                                    {formatHoursMins(totalExpeditionMins)}
+                                    {isDurationTooShort && (
+                                        <span className="ems-stat-warning-chip" title={`Total duration does not meet the minimum ${minDurationHours}h requirement for DofE ${resolvedDofeLevel.toUpperCase()}`}>
+                                            too short
+                                        </span>
+                                    )}
+                                </span>
                             </div>
                         </div>
 
@@ -680,6 +712,7 @@ export function RouteCardBuilder({
                     legs={legs}
                     totalWalkingMinutes={totalWalkingMins}
                     totalRestMinutes={totalProjectRestMins}
+                    dofeLevel={resolvedDofeLevel}
                     onSelectLeg={(idx) => {
                         setActiveLegIndex(idx);
                         if (viewMode !== 'split') {

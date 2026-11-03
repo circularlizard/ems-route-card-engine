@@ -14,6 +14,7 @@ interface StudioConfig {
     team_id?: number;
     day_number?: number;
     is_shortcode?: boolean;
+    dofe_level?: 'bronze' | 'silver' | 'gold' | string;
     os_maps_api_key?: string;
     os_maps_api_secret?: string;
 }
@@ -29,6 +30,7 @@ interface RouteCardStudioProps {
     teamId?: number;
     dayNumber?: number;
     isShortcode?: boolean;
+    dofeLevel?: 'bronze' | 'silver' | 'gold';
     osMapsApiKey?: string;
 }
 
@@ -37,6 +39,7 @@ export function RouteCardStudio({
     teamId = 1,
     dayNumber = 1,
     isShortcode = false,
+    dofeLevel,
     osMapsApiKey,
 }: RouteCardStudioProps) {
     const [activeTab, setActiveTab] = useState<'sandbox' | 'dem_manager' | 'settings'>('sandbox');
@@ -85,6 +88,7 @@ export function RouteCardStudio({
                     teamId={teamId}
                     initialDay={dayNumber}
                     totalDays={3}
+                    dofeLevel={dofeLevel}
                     osMapsApiKey={currentApiKey}
                 />
             )}
@@ -99,6 +103,7 @@ if (rootEl) {
     const teamId = parseInt(rootEl.dataset.team || '', 10) || config?.team_id || 1;
     const day = parseInt(rootEl.dataset.day || '', 10) || config?.day_number || 1;
     const isShortcode = rootEl.dataset.shortcode === 'true' || Boolean(config?.is_shortcode);
+    const rawLevel = (rootEl.dataset.level || config?.dofe_level || 'silver').toLowerCase() as 'bronze' | 'silver' | 'gold';
 
     createRoot(rootEl).render(
         <RouteCardStudio
@@ -106,6 +111,7 @@ if (rootEl) {
             teamId={teamId}
             dayNumber={day}
             isShortcode={isShortcode}
+            dofeLevel={rawLevel}
             osMapsApiKey={config?.os_maps_api_key}
         />
     );
