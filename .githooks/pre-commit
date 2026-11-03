@@ -1,0 +1,14 @@
+#!/bin/sh
+# Prevent committing with an incorrect email in this repository
+
+CONFIG_EMAIL=$(git config user.email)
+AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-$CONFIG_EMAIL}"
+EXPECTED_EMAIL="circularlizard@users.noreply.github.com"
+
+if [ "$AUTHOR_EMAIL" != "$EXPECTED_EMAIL" ]; then
+    echo "❌ ERROR: Commit rejected." >&2
+    echo "   Author email is set to: '$AUTHOR_EMAIL'" >&2
+    echo "   This repository requires: '$EXPECTED_EMAIL'" >&2
+    echo "   Run: git config user.email $EXPECTED_EMAIL" >&2
+    exit 1
+fi
