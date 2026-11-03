@@ -43,6 +43,50 @@
     box-sizing: border-box;
 }
 
+/* ==========================================================================
+   Form Input & Textarea Unified Styles (Override Theme Black Borders)
+   ========================================================================== */
+#ems-route-card-studio-root input[type="text"],
+#ems-route-card-studio-root input[type="number"],
+#ems-route-card-studio-root select,
+#ems-route-card-studio-root textarea {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 14px !important;
+    box-shadow: none !important;
+}
+
+#ems-route-card-studio-root input[type="text"]:focus,
+#ems-route-card-studio-root input[type="number"]:focus,
+#ems-route-card-studio-root select:focus,
+#ems-route-card-studio-root textarea:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    outline: none !important;
+}
+
+#ems-route-card-studio-root input.ems-route-title-input {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#ems-route-card-studio-root input.ems-route-title-input:hover,
+#ems-route-card-studio-root input.ems-route-title-input:focus {
+    border-color: #cbd5e1 !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+#ems-route-card-studio-root input[type="number"] {
+    text-align: center;
+    padding-right: 6px;
+}
+
 .ems-route-card-studio__header h2 {
     margin: 0 0 8px 0;
     font-size: 22px;
@@ -790,14 +834,14 @@ body.admin-bar .ems-builder-sticky-header {
 }
 
 .ems-stat-pill__label {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
     text-transform: uppercase;
     color: #64748b;
 }
 
 .ems-stat-pill__val {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     color: #0f172a;
 }
@@ -853,12 +897,12 @@ body.admin-bar .ems-builder-sticky-header {
 }
 
 .ems-route-stats-bar--compact .ems-stat-pill__label {
-    font-size: 10px;
+    font-size: 11.5px;
     letter-spacing: 0.03em;
 }
 
 .ems-route-stats-bar--compact .ems-stat-pill__val {
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .ems-route-stats-bar--compact .ems-view-btn {
@@ -1398,8 +1442,8 @@ body.admin-bar .ems-builder-sticky-header {
 }
 
 .ems-leg-summary-names {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     color: #1e293b;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1420,7 +1464,7 @@ body.admin-bar .ems-builder-sticky-header {
 }
 
 .ems-leg-summary-stats {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: #64748b;
     font-variant-numeric: tabular-nums;
@@ -1540,7 +1584,7 @@ body.admin-bar .ems-builder-sticky-header {
 
 .ems-waypoint-subtext {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: #64748b;
     margin-top: 3px;
     padding-left: 2px;
@@ -1567,7 +1611,7 @@ body.admin-bar .ems-builder-sticky-header {
 }
 
 .ems-leg-stats-inline {
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 500;
     color: #334155;
     display: flex;
@@ -1635,23 +1679,17 @@ body.admin-bar .ems-builder-sticky-header {
 
 /* Standardized Form Field Labels */
 .ems-field-label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #64748b;
+    color: #475569;
     display: flex;
     align-items: center;
     gap: 5px;
 }
 
-.ems-input-label-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0 0 5px 0;
-}
-
+.ems-input-label-row,
 .leg-field-label-row,
 .ems-label-with-addon.leg-field-label-row {
     display: flex;
@@ -1661,6 +1699,22 @@ body.admin-bar .ems-builder-sticky-header {
     margin: 0 0 5px 0 !important;
     line-height: 1;
     box-sizing: border-box;
+}
+
+/* Contextual Field Warnings */
+.ems-field-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #b45309;
+    background-color: #fef3c7;
+    border: 1px solid #fde68a;
+    padding: 1px 8px;
+    border-radius: 999px;
+    line-height: 1.4;
+    white-space: nowrap;
 }
 
 /* Subtle Quality Dot (Replaces Icon Badges) */
@@ -1696,7 +1750,7 @@ textarea.ems-auto-expand,
     display: block;
     width: 100%;
     min-height: 34px;
-    height: 34px;
+    height: auto;
     padding: 6px 10px;
     font-size: 12.5px;
     line-height: 1.4;
@@ -1752,10 +1806,10 @@ textarea.ems-auto-expand::placeholder,
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-/* 2-Column Grid: Escape Route + Rest (mins) */
+/* 2-Column Grid: Escape Route + Stops (mins) */
 .ems-leg-bottom-row {
     display: grid;
-    grid-template-columns: 1fr 120px;
+    grid-template-columns: 1fr 110px;
     gap: 12px;
     align-items: start;
 }
@@ -1820,7 +1874,7 @@ textarea.ems-auto-expand::placeholder,
 
 .ems-input-number {
     width: 100%;
-    padding: 6px 10px;
+    padding: 6px 6px;
     font-size: 12px;
     font-weight: 600;
     color: #0f172a;
@@ -1831,7 +1885,8 @@ textarea.ems-auto-expand::placeholder,
     height: 34px;
     margin: 0;
     font-family: inherit;
-    text-align: right;
+    text-align: center;
+    padding-right: 6px;
     font-variant-numeric: tabular-nums;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
@@ -1844,6 +1899,29 @@ textarea.ems-auto-expand::placeholder,
 
 .ems-leg-input-block--activity {
     margin-top: 2px;
+}
+
+/* Explicit Ghost Button: Add Stop or Aim Activity */
+.ems-ghost-btn--add-activity {
+    background: transparent;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.ems-ghost-btn--add-activity:hover {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+    color: #1e293b;
 }
 
 .ems-mobile-arrow {
@@ -1979,10 +2057,43 @@ textarea.ems-auto-expand::placeholder,
 }
 
 .ems-coaching-banner__text {
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.ems-coaching-leg-btn {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 1px 6px;
     font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 700;
+    color: #b45309;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: baseline;
+    line-height: 1.2;
+}
+
+.ems-coaching-leg-btn:hover {
+    background: #fde68a;
+    color: #92400e;
+    border-color: #d97706;
+}
+
+.ems-coaching-leg-btn--inline {
+    margin-right: 4px;
+}
+
+.ems-coaching-time-note {
+    font-size: 12px;
+    color: #92400e;
 }
 
 .ems-coaching-banner__toggle-btn {
@@ -2343,6 +2454,14 @@ textarea.ems-auto-expand::placeholder,
 }
 
 @media (max-width: 768px) {
+    /* Mobile font-size bump to prevent iOS Safari auto-zoom */
+    #ems-route-card-studio-root input[type="text"],
+    #ems-route-card-studio-root input[type="number"],
+    #ems-route-card-studio-root select,
+    #ems-route-card-studio-root textarea {
+        font-size: 16px !important;
+    }
+
     .ems-route-card-studio,
     .ems-route-studio-wrapper {
         padding: 0;

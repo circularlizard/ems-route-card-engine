@@ -126,4 +126,147 @@ describe('RouteLegCard Checkpoint Vector & Editing Behavior', () => {
         expect(screen.queryByRole('button', { name: /Split Leg/i })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Merge with Next/i })).not.toBeInTheDocument();
     });
+
+    it('renders contextual warnings: long leg (>3.5km), route notes, and escape route', () => {
+        // mockLeg1 has distance 4.2km (>3.5km), route_description >= 15 chars, escape_route populated
+        const { rerender } = render(
+            <RouteLegCard
+                leg={mockLeg1}
+                isActive={true}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        // Long leg warning should be present because distance is 4.2 km
+        expect(screen.getByText(/Leg > 3.5 km/i)).toBeInTheDocument();
+
+        // ROUTE NOTES and ESCAPE ROUTE are populated, so no field warnings
+        expect(screen.queryByText(/Add route notes/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Add escape route/i)).not.toBeInTheDocument();
+
+        // Rerender with empty notes and escape route, short distance (2.0 km)
+        const emptyLeg: RouteLeg = {
+            ...mockLeg1,
+            distance_km: 2.0,
+            route_description: '',
+            escape_route: '',
+            rest_minutes: 0,
+            activity_notes: '',
+        };
+
+        rerender(
+            <RouteLegCard
+                leg={emptyLeg}
+                isActive={true}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        // Long leg warning should NOT be present
+        expect(screen.queryByText(/Leg > 3.5 km/i)).not.toBeInTheDocument();
+
+        // Field warnings should be visible
+        expect(screen.getByText(/Add route notes/i)).toBeInTheDocument();
+        expect(screen.getByText(/Add escape route/i)).toBeInTheDocument();
+
+        // When route notes has short text (< 15 chars)
+        const shortLeg: RouteLeg = {
+            ...emptyLeg,
+            route_description: 'Follow path',
+        };
+
+        rerender(
+            <RouteLegCard
+                leg={shortLeg}
+                isActive={true}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText(/Add bearings, paths or landmarks/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Add route notes/i)).not.toBeInTheDocument();
+    });
+
+    it('renders STOPS (MIN) label and handles stop / aim activity disclosure', () => {
+        // When stops == 0 and activity notes empty, render ghost button
+        const zeroStopsLeg: RouteLeg = {
+            ...mockLeg1,
+            rest_minutes: 0,
+            activity_notes: '',
+        };
+
+        render(
+            <RouteLegCard
+                leg={zeroStopsLeg}
+                isActive={true}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        // STOPS (MIN) label
+        expect(screen.getByText('STOPS (MIN)')).toBeInTheDocument();
+
+        // Ghost button to add activity
+        const ghostBtn = screen.getByRole('button', { name: /\+ Add stop or aim activity/i });
+        expect(ghostBtn).toBeInTheDocument();
+
+        // Clicking ghost button reveals STOP / AIM ACTIVITY textarea
+        fireEvent.click(ghostBtn);
+        expect(screen.getByText('STOP / AIM ACTIVITY')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Expedition aim/i)).toBeInTheDocument();
+    });
+
+    it('only displays the dot in the collapsed leg header when there is an issue', () => {
+        // Complete leg with distance <= 3.5 km and full notes & escape
+        const completeLeg: RouteLeg = {
+            ...mockLeg1,
+            distance_km: 2.5,
+            route_description: 'Follow distinct gravel path up the valley to high col',
+            escape_route: 'Return along valley floor to trailhead',
+        };
+
+        const { rerender } = render(
+            <RouteLegCard
+                leg={completeLeg}
+                isActive={false}
+                isExpanded={false}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        // No dot should be rendered for complete leg
+        expect(screen.queryByText('●')).not.toBeInTheDocument();
+
+        // Incomplete leg (missing escape route)
+        const issueLeg: RouteLeg = {
+            ...completeLeg,
+            escape_route: '',
+        };
+
+        rerender(
+            <RouteLegCard
+                leg={issueLeg}
+                isActive={false}
+                isExpanded={false}
+                isLastLeg={false}
+                onSelect={vi.fn()}
+                onUpdateLeg={vi.fn()}
+            />
+        );
+
+        // Amber dot should be rendered when there is an issue
+        const dot = screen.getByText('●');
+        expect(dot).toBeInTheDocument();
+        expect(dot).toHaveClass('ems-leg-status-dot--incomplete');
+    });
 });

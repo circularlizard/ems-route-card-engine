@@ -5,12 +5,28 @@ import {
     faCheckCircle,
     faChevronDown,
     faChevronUp,
-    faShieldHalved,
-    faRoute,
     faClock,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg } from '../types/route-card';
 import { formatHoursMins } from '../utils/route-calculations';
+
+export function getLegIssues(leg: RouteLeg): string[] {
+    const issues: string[] = [];
+    if (leg.distance_km > 3.5) {
+        issues.push('Leg > 3.5 km');
+    }
+    const desc = (leg.route_description || (leg as any).description || '').trim();
+    if (desc.length === 0) {
+        issues.push('Add route notes');
+    } else if (desc.length < 15) {
+        issues.push('Add bearings, paths or landmarks');
+    }
+    const escape = (leg.escape_route || '').trim();
+    if (escape.length === 0) {
+        issues.push('Add escape route');
+    }
+    return issues;
+}
 
 interface RouteCoachingBannerProps {
     legs: RouteLeg[];
@@ -18,6 +34,7 @@ interface RouteCoachingBannerProps {
     totalRestMinutes: number;
     totalProjectMinutes?: number;
     dofeLevel?: 'bronze' | 'silver' | 'gold';
+    onSelectLeg?: (legIndex: number) => void;
 }
 
 export function RouteCoachingBanner({
@@ -26,59 +43,28 @@ export function RouteCoachingBanner({
     totalRestMinutes,
     totalProjectMinutes = 0,
     dofeLevel = 'silver',
+    onSelectLeg,
 }: RouteCoachingBannerProps) {
     const [isCollapsed, setIsCollapsed] = useState(true);
 
-    const issues: { type: 'warning' | 'info'; message: string; icon: typeof faTriangleExclamation }[] = [];
-    const summarySnippets: string[] = [];
+    // 1. Identify problem legs
+    const problemLegs = legs
+        .map((leg, idx) => ({
+            leg,
+            idx,
+            legNumber: leg.leg_number,
+            name: `${leg.start_name || 'Start'} → ${leg.end_name || 'End'}`,
+            issues: getLegIssues(leg),
+        }))
+        .filter((item) => item.issues.length > 0);
 
-    // 1. Minimum DofE Expedition Hours
+    // 2. Minimum DofE Expedition Hours
     const totalExpMins = totalWalkingMinutes + totalRestMinutes + totalProjectMinutes;
     const totalExpHours = totalExpMins / 60.0;
     const minHours = dofeLevel === 'bronze' ? 6 : dofeLevel === 'silver' ? 7 : 8;
+    const isUnderTime = totalExpHours < minHours;
 
-    if (totalExpHours < minHours) {
-        issues.push({
-            type: 'warning',
-            icon: faClock,
-            message: `Total expedition time is ${formatHoursMins(totalExpMins)} (${totalExpHours.toFixed(1)} hrs). DofE ${dofeLevel.toUpperCase()} requires a minimum of ${minHours} hours planned activity per day.`,
-        });
-        summarySnippets.push(`Under ${minHours}h planned time`);
-    }
-
-    // 2. Long legs without checkpoints (> 3.5km)
-    const longLegs = legs.filter((l) => l.distance_km > 3.5);
-    if (longLegs.length > 0) {
-        issues.push({
-            type: 'info',
-            icon: faRoute,
-            message: `${longLegs.length} leg(s) exceed 3.5 km without an intermediate checkpoint (e.g. Leg ${longLegs.map((l) => l.leg_number).join(', ')}). Consider adding a split point at a col or river crossing.`,
-        });
-        summarySnippets.push(`${longLegs.length} leg(s) > 3.5km`);
-    }
-
-    // 3. Missing descriptions or escape routes
-    const missingDesc = legs.filter((l) => !l.route_description || l.route_description.trim().length < 10);
-    if (missingDesc.length > 0) {
-        issues.push({
-            type: 'warning',
-            icon: faTriangleExclamation,
-            message: `${missingDesc.length} leg(s) have brief or missing route navigation descriptions.`,
-        });
-        summarySnippets.push(`${missingDesc.length} leg(s) missing detail`);
-    }
-
-    const missingEscape = legs.filter((l) => !l.escape_route || l.escape_route.trim().length < 5);
-    if (missingEscape.length > 0) {
-        issues.push({
-            type: 'warning',
-            icon: faShieldHalved,
-            message: `${missingEscape.length} leg(s) are missing safety and escape route instructions.`,
-        });
-        summarySnippets.push(`${missingEscape.length} missing escape`);
-    }
-
-    if (issues.length === 0) {
+    if (problemLegs.length === 0 && !isUnderTime) {
         return (
             <div className="ems-coaching-banner ems-coaching-banner--success">
                 <div className="ems-coaching-banner__summary">
@@ -89,16 +75,49 @@ export function RouteCoachingBanner({
         );
     }
 
-    const summaryLine = summarySnippets.join(', ');
+    if (problemLegs.length === 0 && isUnderTime) {
+        return (
+            <div className="ems-coaching-banner ems-coaching-banner--warning">
+                <div className="ems-coaching-banner__summary">
+                    <div className="ems-coaching-banner__title">
+                        <FontAwesomeIcon icon={faClock} className="ems-coaching-banner__icon" />
+                        <span className="ems-coaching-banner__text">
+                            <b>Total expedition time is under {minHours}h</b> ({formatHoursMins(totalExpMins)}). DofE {dofeLevel.toUpperCase()} requires a minimum of {minHours} hours planned activity per day.
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ems-coaching-banner ems-coaching-banner--warning">
-            <div className="ems-coaching-banner__summary" onClick={() => setIsCollapsed(!isCollapsed)}>
+            <div className="ems-coaching-banner__summary">
                 <div className="ems-coaching-banner__title">
                     <FontAwesomeIcon icon={faTriangleExclamation} className="ems-coaching-banner__icon" />
                     <span className="ems-coaching-banner__text">
-                        <b>{issues.length} Route Check{issues.length > 1 ? 's' : ''}</b>
-                        {summaryLine ? ` — ${summaryLine}` : ''}
+                        <b>Issues with {problemLegs.length === 1 ? 'leg' : 'legs'} </b>
+                        {problemLegs.map((item, i) => (
+                            <span key={item.legNumber}>
+                                {i > 0 && ', '}
+                                <button
+                                    type="button"
+                                    className="ems-coaching-leg-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSelectLeg?.(item.idx);
+                                    }}
+                                    title={`Leg ${item.legNumber} (${item.name}): ${item.issues.join(', ')} — click to expand`}
+                                >
+                                    {item.legNumber}
+                                </button>
+                            </span>
+                        ))}
+                        {isUnderTime && (
+                            <span className="ems-coaching-time-note">
+                                {' '}(and under {minHours}h minimum planned time)
+                            </span>
+                        )}
                     </span>
                 </div>
                 <button
@@ -117,12 +136,31 @@ export function RouteCoachingBanner({
 
             {!isCollapsed && (
                 <ul className="ems-coaching-list">
-                    {issues.map((iss, i) => (
-                        <li key={i} className={`ems-coaching-item ems-coaching-item--${iss.type}`}>
-                            <FontAwesomeIcon icon={iss.icon} className="ems-coaching-item__icon" />
-                            <span>{iss.message}</span>
+                    {problemLegs.map((item) => (
+                        <li key={item.legNumber} className="ems-coaching-item ems-coaching-item--warning">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="ems-coaching-item__icon" />
+                            <span>
+                                <button
+                                    type="button"
+                                    className="ems-coaching-leg-btn ems-coaching-leg-btn--inline"
+                                    onClick={() => onSelectLeg?.(item.idx)}
+                                    title="Click to expand this leg"
+                                >
+                                    Leg {item.legNumber} ({item.name})
+                                </button>
+                                : {item.issues.join(' • ')}
+                            </span>
                         </li>
                     ))}
+                    {isUnderTime && (
+                        <li className="ems-coaching-item ems-coaching-item--warning">
+                            <FontAwesomeIcon icon={faClock} className="ems-coaching-item__icon" />
+                            <span>
+                                Total expedition time is {formatHoursMins(totalExpMins)} ({totalExpHours.toFixed(1)} hrs).
+                                DofE {dofeLevel.toUpperCase()} requires a minimum of {minHours} hours planned activity per day.
+                            </span>
+                        </li>
+                    )}
                 </ul>
             )}
         </div>

@@ -610,7 +610,7 @@ export function RouteCardBuilder({
                                 <span className="ems-stat-pill__val">{formatHoursMins(totalWalkingMins)}</span>
                             </div>
                             <div className="ems-stat-pill">
-                                <span className="ems-stat-pill__label">Project &amp; Rest</span>
+                                <span className="ems-stat-pill__label">Stops</span>
                                 <span className="ems-stat-pill__val">{formatHoursMins(totalProjectRestMins)}</span>
                             </div>
                             <div className="ems-stat-pill ems-stat-pill--highlight">
@@ -680,6 +680,12 @@ export function RouteCardBuilder({
                     legs={legs}
                     totalWalkingMinutes={totalWalkingMins}
                     totalRestMinutes={totalProjectRestMins}
+                    onSelectLeg={(idx) => {
+                        setActiveLegIndex(idx);
+                        if (viewMode !== 'split') {
+                            setViewMode('split');
+                        }
+                    }}
                 />
             )}
 

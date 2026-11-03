@@ -1,6 +1,6 @@
 import { useId, useRef, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronRight, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
 import { formatHoursMins } from '../utils/route-calculations';
 
@@ -79,13 +79,32 @@ export function RouteLegCard({
 
     const isCardExpanded = isExpanded !== undefined ? isExpanded : true;
 
+    // Resilient fallback resolution for checkpoint names, coordinates, and elevations
+    const vStart = vertices && vertices[leg.start_vertex_index];
+    const vEnd = vertices && vertices[leg.end_vertex_index];
+
+    const startName = leg.start_name || (leg as any).checkpoint_from || (leg.leg_number === 1 ? 'Start' : `Checkpoint ${leg.leg_number}`);
+    const endName = leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`);
+
+    const startGrid = leg.start_grid_ref || (leg as any).start_grid_ref_6 || vStart?.grid_ref_6 || '';
+    const endGrid = leg.end_grid_ref || (leg as any).end_grid_ref_6 || vEnd?.grid_ref_6 || '';
+
+    const startEle = leg.start_elevation_m ?? vStart?.ele_dem ?? 0;
+    const endEle = leg.end_elevation_m ?? vEnd?.ele_dem ?? 0;
+
+    // Check description and escape route status
+    const desc = leg.route_description !== undefined
+        ? leg.route_description
+        : ((leg as any).description ?? '');
+    const descLength = desc.trim().length;
+    const escapeLength = (leg.escape_route || '').trim().length;
+
     // Check completion status (Amber if missing navigation or escape details, Green if complete)
     const isLegComplete = Boolean(
-        leg.route_description &&
-        leg.route_description.trim().length >= 10 &&
-        leg.escape_route &&
-        leg.escape_route.trim().length >= 5
+        descLength >= 15 &&
+        escapeLength > 0
     );
+    const hasLegIssue = !isLegComplete || leg.distance_km > 3.5;
 
     // Touch swipe handling for horizontal stepping on touch devices
     const touchStartXRef = useRef<number | null>(null);
@@ -116,46 +135,28 @@ export function RouteLegCard({
         }
     }, [isActive]);
 
-    // Resilient fallback resolution for checkpoint names, coordinates, and elevations
-    const vStart = vertices && vertices[leg.start_vertex_index];
-    const vEnd = vertices && vertices[leg.end_vertex_index];
-
-    const startName = leg.start_name || (leg as any).checkpoint_from || (leg.leg_number === 1 ? 'Start' : `Checkpoint ${leg.leg_number}`);
-    const endName = leg.end_name || (leg as any).checkpoint_to || (isLastLeg ? 'Finish' : `Checkpoint ${leg.leg_number + 1}`);
-
-    const startGrid = leg.start_grid_ref || (leg as any).start_grid_ref_6 || vStart?.grid_ref_6 || '';
-    const endGrid = leg.end_grid_ref || (leg as any).end_grid_ref_6 || vEnd?.grid_ref_6 || '';
-
-    const startEle = leg.start_elevation_m ?? vStart?.ele_dem ?? 0;
-    const endEle = leg.end_elevation_m ?? vEnd?.ele_dem ?? 0;
-
-    // Check description quality
-    const desc = leg.route_description !== undefined
-        ? leg.route_description
-        : ((leg as any).description ?? '');
-    const wordCount = desc.trim() ? desc.trim().split(/\s+/).length : 0;
-    const navKeywords = ['stream', 'burn', 'track', 'path', 'ridge', 'cairn', 'col', 'contour', 'handrail', 'wall', 'fence', 'summit'];
-    const foundKeywords = navKeywords.filter((kw) => desc.toLowerCase().includes(kw));
-
-    let qualityStatus: 'poor' | 'medium' | 'good' = 'poor';
-    if (wordCount >= 15 && foundKeywords.length >= 2) {
-        qualityStatus = 'good';
-    } else if (wordCount >= 8 || foundKeywords.length >= 1) {
-        qualityStatus = 'medium';
-    }
-
     const projectRestMins = leg.rest_minutes || 0;
 
-    // Progressive disclosure state for optional project activity
+    // Progressive disclosure state for optional stop / aim activity
     const hasInitialActivity = Boolean(leg.activity_notes && leg.activity_notes.trim().length > 0);
     const [showActivity, setShowActivity] = useState(hasInitialActivity || projectRestMins > 0);
 
-    // Sync heights on render and value changes
+    // Sync heights on render, expansion, and value changes
     useEffect(() => {
-        syncTextareaHeight(navDescRef.current);
-        syncTextareaHeight(escapeRouteRef.current);
-        syncTextareaHeight(activityNotesRef.current);
-    }, [desc, leg.escape_route, leg.activity_notes, showActivity]);
+        if (!isCardExpanded) return;
+        const syncAll = () => {
+            syncTextareaHeight(navDescRef.current);
+            syncTextareaHeight(escapeRouteRef.current);
+            syncTextareaHeight(activityNotesRef.current);
+        };
+        syncAll();
+        const rId = requestAnimationFrame(syncAll);
+        const tId = setTimeout(syncAll, 60);
+        return () => {
+            cancelAnimationFrame(rId);
+            clearTimeout(tId);
+        };
+    }, [isCardExpanded, desc, leg.escape_route, leg.activity_notes, showActivity]);
 
     const handleTextChange = (field: keyof RouteLeg, value: string | number) => {
         const updatedLeg: any = {
@@ -211,13 +212,15 @@ export function RouteLegCard({
                     <span className="ems-leg-summary-stats font-mono">
                         {leg.distance_km} km • +{Math.round(leg.ascent_m)}m • {formatHoursMins(leg.walking_minutes)}
                     </span>
-                    <span
-                        className={`ems-leg-status-dot ${isLegComplete ? 'ems-leg-status-dot--complete' : 'ems-leg-status-dot--incomplete'}`}
-                        title={isLegComplete ? 'Leg route checks complete' : 'Needs route or escape details'}
-                        aria-label={isLegComplete ? 'Complete' : 'Needs details'}
-                    >
-                        ●
-                    </span>
+                    {hasLegIssue && (
+                        <span
+                            className="ems-leg-status-dot ems-leg-status-dot--incomplete"
+                            title="Needs route or escape details"
+                            aria-label="Issues with leg"
+                        >
+                            ●
+                        </span>
+                    )}
                     <FontAwesomeIcon icon={faChevronRight} className="ems-summary-chevron" />
                 </div>
             </div>
@@ -290,72 +293,86 @@ export function RouteLegCard({
                         <span className="ems-stat-num">{climbDescentStr}</span>
                         <span className="ems-stat-sep">•</span>
                         <span className="ems-stat-num">{formatHoursMins(leg.walking_minutes)} walk</span>
+                        {leg.distance_km > 3.5 && (
+                            <>
+                                <span className="ems-stat-sep">•</span>
+                                <span className="ems-field-warning">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} /> Leg &gt; 3.5 km (hover map to split)
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Body Area */}
             <div className="ems-leg-card__body leg-card-body">
-                {/* Route Navigation Description */}
+                {/* Route Notes */}
                 <div className="ems-leg-input-block" onClick={(e) => e.stopPropagation()}>
-                    <div className="ems-input-label-row">
+                    <div className="leg-field-label-row">
                         <label htmlFor={navDescId} className="ems-field-label">
-                            Route Navigation Description
+                            ROUTE NOTES
                         </label>
 
-                        <div className={`ems-quality-dot ems-quality-dot--${qualityStatus}`}>
-                            <span className="ems-dot" aria-hidden="true">●</span>
-                            <span>{qualityStatus === 'good' ? 'Detailed' : qualityStatus === 'medium' ? 'Basic' : 'Needs detail'}</span>
-                        </div>
+                        {descLength === 0 ? (
+                            <span className="ems-field-warning">
+                                <FontAwesomeIcon icon={faTriangleExclamation} /> Add route notes
+                            </span>
+                        ) : descLength < 15 ? (
+                            <span className="ems-field-warning">
+                                <FontAwesomeIcon icon={faTriangleExclamation} /> Add bearings, paths or landmarks
+                            </span>
+                        ) : null}
                     </div>
 
                     <textarea
-                        ref={navDescRef}
+                        ref={(el) => {
+                            navDescRef.current = el;
+                            if (el) syncTextareaHeight(el);
+                        }}
                         id={navDescId}
                         className="ems-textarea ems-auto-expand"
-                        rows={2}
+                        rows={1}
                         value={desc}
                         onInput={(e) => syncTextareaHeight(e.currentTarget)}
                         onChange={(e) => handleTextChange('route_description', e.target.value)}
-                        placeholder="Describe paths, tracks, handrails, terrain features, col crossings, and checkpoint arrival..."
+                        placeholder="Paths, bearings, landmarks..."
                     />
                 </div>
 
-                {/* 2-Column Grid: Escape Route + Rest (mins) */}
+                {/* 2-Column Grid: Escape Route + Stops (mins) */}
                 <div className="ems-leg-bottom-row" onClick={(e) => e.stopPropagation()}>
                     <div className="ems-leg-input-block ems-leg-input-block--escape">
                         <div className="leg-field-label-row">
                             <label htmlFor={escapeRouteId} className="ems-field-label">
-                                Escape Route
+                                ESCAPE ROUTE
                             </label>
+                            {escapeLength === 0 && (
+                                <span className="ems-field-warning">
+                                    <FontAwesomeIcon icon={faTriangleExclamation} /> Add escape route
+                                </span>
+                            )}
                         </div>
                         <textarea
-                            ref={escapeRouteRef}
+                            ref={(el) => {
+                                escapeRouteRef.current = el;
+                                if (el) syncTextareaHeight(el);
+                            }}
                             id={escapeRouteId}
                             rows={1}
                             className="ems-auto-expand"
                             value={leg.escape_route || ''}
                             onInput={(e) => syncTextareaHeight(e.currentTarget)}
                             onChange={(e) => handleTextChange('escape_route', e.target.value)}
-                            placeholder="Emergency egress / valley route in bad weather..."
+                            placeholder="How to get to safety if something happens"
                         />
                     </div>
 
                     <div className="ems-leg-input-block ems-leg-input-block--rest">
-                        <div className="ems-label-with-addon leg-field-label-row">
+                        <div className="leg-field-label-row">
                             <label htmlFor={restMinsId} className="ems-field-label">
-                                Rest (min)
+                                STOPS (MIN)
                             </label>
-                            {!showActivity && projectRestMins === 0 && (
-                                <button
-                                    type="button"
-                                    className="ems-add-activity-btn"
-                                    onClick={() => setShowActivity(true)}
-                                    title="Add expedition project or aim activity"
-                                >
-                                    + Project
-                                </button>
-                            )}
                         </div>
                         <input
                             id={restMinsId}
@@ -374,14 +391,19 @@ export function RouteLegCard({
                     </div>
                 </div>
 
-                {/* Conditional Project Activity Field */}
-                {(showActivity || projectRestMins > 0 || Boolean(leg.activity_notes && leg.activity_notes.trim().length > 0)) && (
+                {/* Conditional Stop / Aim Activity Field or Explicit Ghost Button */}
+                {(showActivity || projectRestMins > 0 || hasInitialActivity) ? (
                     <div className="ems-leg-input-block ems-leg-input-block--activity" onClick={(e) => e.stopPropagation()}>
-                        <label htmlFor={activityNotesId} className="ems-field-label">
-                            Project Activity
-                        </label>
+                        <div className="leg-field-label-row">
+                            <label htmlFor={activityNotesId} className="ems-field-label">
+                                STOP / AIM ACTIVITY
+                            </label>
+                        </div>
                         <textarea
-                            ref={activityNotesRef}
+                            ref={(el) => {
+                                activityNotesRef.current = el;
+                                if (el) syncTextareaHeight(el);
+                            }}
                             id={activityNotesId}
                             rows={1}
                             className="ems-auto-expand"
@@ -391,6 +413,20 @@ export function RouteLegCard({
                             placeholder="Expedition aim / team project observation..."
                         />
                     </div>
+                ) : (
+                    <button
+                        type="button"
+                        className="ems-ghost-btn ems-ghost-btn--add-activity"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowActivity(true);
+                            setTimeout(() => {
+                                activityNotesRef.current?.focus();
+                            }, 50);
+                        }}
+                    >
+                        + Add stop or aim activity
+                    </button>
                 )}
             </div>
         </div>

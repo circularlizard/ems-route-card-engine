@@ -58,10 +58,10 @@ export function RouteLegTable({
                         <th style={{ width: '65px' }}>Dist (km)</th>
                         <th style={{ width: '65px' }}>Climb (m)</th>
                         <th style={{ width: '75px' }}>Walk Time</th>
-                        <th style={{ width: '95px' }}>Rest (min)</th>
+                        <th style={{ width: '95px' }}>Stops (min)</th>
                         <th style={{ width: '75px' }}>Total</th>
-                        <th style={{ minWidth: '220px' }}>Navigation Description</th>
-                        <th style={{ minWidth: '140px' }}>Project Activity</th>
+                        <th style={{ minWidth: '220px' }}>Route Notes</th>
+                        <th style={{ minWidth: '140px' }}>Stop / Aim Activity</th>
                         <th style={{ minWidth: '140px' }}>Escape Route</th>
                         <th style={{ width: '70px' }}>Actions</th>
                     </tr>
@@ -103,7 +103,7 @@ export function RouteLegTable({
                                             value={projectRestMins}
                                             onClick={(e) => e.stopPropagation()}
                                             onChange={(e) => handleTextChange(idx, 'rest_minutes', parseInt(e.target.value, 10) || 0)}
-                                            title="Project & Rest Duration (minutes)"
+                                            title="Stops Duration (minutes)"
                                         />
                                         <span className="font-mono" style={{ fontSize: '11px', color: '#64748b' }}>
                                             m
@@ -121,7 +121,7 @@ export function RouteLegTable({
                                         onClick={(e) => e.stopPropagation()}
                                         onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'route_description', e.target.value)}
-                                        placeholder="Path, handrails, features..."
+                                        placeholder="Paths, bearings, landmarks..."
                                     />
                                 </td>
                                 <td>
@@ -132,7 +132,7 @@ export function RouteLegTable({
                                         onClick={(e) => e.stopPropagation()}
                                         onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'activity_notes', e.target.value)}
-                                        placeholder="Project / aim activity..."
+                                        placeholder="Expedition aim / team project observation..."
                                     />
                                 </td>
                                 <td>
@@ -143,7 +143,7 @@ export function RouteLegTable({
                                         onClick={(e) => e.stopPropagation()}
                                         onInput={(e) => syncTextareaHeight(e.currentTarget)}
                                         onChange={(e) => handleTextChange(idx, 'escape_route', e.target.value)}
-                                        placeholder="Escape plan..."
+                                        placeholder="How to get to safety if something happens"
                                     />
                                 </td>
                                 <td className="ems-text-center" onClick={(e) => e.stopPropagation()}>
