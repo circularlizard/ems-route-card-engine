@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import proj4 from 'proj4';
 import proj4leaflet from 'proj4leaflet';
@@ -7,6 +7,10 @@ import {
     faExpand,
     faCompress,
     faLocationCrosshairs,
+    faPlus,
+    faMinus,
+    faLayerGroup,
+    faCheck,
 } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
 import { findNearestTrackPointIndex } from '../utils/route-calculations';
@@ -52,6 +56,23 @@ function getBngCrs(): L.CRS {
     return L.CRS.EPSG3857;
 }
 
+type BaseLayerId = 'opentopo' | 'os' | 'cyclosm' | 'osm' | 'esri';
+
+interface BaseLayerDef {
+    id: BaseLayerId;
+    label: string;
+    title: string;
+    requiresKey?: boolean;
+}
+
+const BASE_LAYERS: BaseLayerDef[] = [
+    { id: 'opentopo', label: 'OpenTopo', title: 'Topographic Contours (OpenTopoMap)' },
+    { id: 'os', label: 'OS Leisure', title: 'Official Ordnance Survey 1:25k / 1:50k', requiresKey: true },
+    { id: 'cyclosm', label: 'CyclOSM', title: 'Outdoor Topo with Contours & Trails (CyclOSM)' },
+    { id: 'osm', label: 'Street', title: 'Standard OpenStreetMap' },
+    { id: 'esri', label: 'ESRI', title: 'ESRI World Topo with Shaded Relief & Contours' },
+];
+
 interface RouteMapProps {
     vertices: RouteVertex[];
     legs: RouteLeg[];
@@ -68,6 +89,8 @@ interface RouteMapProps {
     hoveredVertexIndex?: number | null;
     onHoverVertex?: (vertexIndex: number | null) => void;
     hoveredLegIndex?: number | null;
+    isFocusMode?: boolean;
+    onToggleFocusMode?: (focused: boolean) => void;
 }
 
 export function RouteMap({
@@ -86,6 +109,8 @@ export function RouteMap({
     hoveredVertexIndex,
     onHoverVertex,
     hoveredLegIndex,
+    isFocusMode: isFocusModeProp,
+    onToggleFocusMode,
 }: RouteMapProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -98,6 +123,25 @@ export function RouteMap({
     const loadedRouteSigRef = useRef<string>('');
     const prevActiveLegIndexRef = useRef<number | null>(null);
     const [mapReady, setMapReady] = useState(0);
+
+    // Floating UI controls refs and state
+    const layerControlRef = useRef<HTMLDivElement | null>(null);
+    const actionDockRef = useRef<HTMLDivElement | null>(null);
+    const layerMenuCloseTimerRef = useRef<number | null>(null);
+    const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
+
+    // Left-column Focus Mode state (managed internally or via parent prop)
+    const [internalFocusMode, setInternalFocusMode] = useState(false);
+    const isFocusMode = isFocusModeProp !== undefined ? isFocusModeProp : internalFocusMode;
+
+    const toggleFocusMode = useCallback(() => {
+        const next = !isFocusMode;
+        if (onToggleFocusMode) {
+            onToggleFocusMode(next);
+        } else {
+            setInternalFocusMode(next);
+        }
+    }, [isFocusMode, onToggleFocusMode]);
 
     // Keep callback props updated in a ref so layer effects never destroy layers on parent re-renders
     const callbacksRef = useRef({
@@ -121,10 +165,60 @@ export function RouteMap({
         };
     });
 
-    const [baseLayer, setBaseLayer] = useState<'opentopo' | 'cyclosm' | 'esri' | 'osm' | 'os'>('opentopo');
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [baseLayer, setBaseLayer] = useState<BaseLayerId>('opentopo');
 
     const isBng = baseLayer === 'os' && Boolean(osMapsApiKey);
+
+    // Esc key: closes layer flyout first if open; otherwise exits focus mode
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (isLayerMenuOpen) {
+                    setIsLayerMenuOpen(false);
+                    e.stopPropagation();
+                    return;
+                }
+                if (isFocusMode) {
+                    if (onToggleFocusMode) {
+                        onToggleFocusMode(false);
+                    } else {
+                        setInternalFocusMode(false);
+                    }
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isLayerMenuOpen, isFocusMode, onToggleFocusMode]);
+
+    // Crucial Leaflet Fix: Invalidate map size whenever focus mode toggles so tiles & routes render cleanly
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+        map.invalidateSize();
+        const t1 = window.setTimeout(() => map.invalidateSize(), 150);
+        const t2 = window.setTimeout(() => map.invalidateSize(), 350);
+        return () => {
+            window.clearTimeout(t1);
+            window.clearTimeout(t2);
+        };
+    }, [isFocusMode]);
+
+    // Dismiss layer menu on click outside
+    useEffect(() => {
+        if (!isLayerMenuOpen) return;
+        const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+            if (layerControlRef.current && !layerControlRef.current.contains(e.target as Node)) {
+                setIsLayerMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isLayerMenuOpen]);
 
     // Initialize Leaflet Map whenever the projection (isBng) changes or mounts
     useEffect(() => {
@@ -154,9 +248,6 @@ export function RouteMap({
             zoomSnap,
             zoomDelta: 0.5,
         });
-
-        // Add custom zoom control top-right
-        L.control.zoom({ position: 'topright' }).addTo(map);
 
         routeLayerGroupRef.current = L.layerGroup().addTo(map);
         mapInstanceRef.current = map;
@@ -797,7 +888,18 @@ export function RouteMap({
         }
     }, [mapReady, hoveredVertexIndex, vertices, activeLegIndex, legs, ghostSplitVertexIndex]);
 
-    const fitEntireRoute = () => {
+    const handleZoomIn = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        mapInstanceRef.current?.zoomIn();
+    };
+
+    const handleZoomOut = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        mapInstanceRef.current?.zoomOut();
+    };
+
+    const fitEntireRoute = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
         const map = mapInstanceRef.current;
         if (!map || vertices.length < 2) return;
         const allCoords: [number, number][] = vertices.map((v) => [v.lat, v.lon]);
@@ -809,95 +911,129 @@ export function RouteMap({
         });
     };
 
+    const handleLayerMouseEnter = () => {
+        if (layerMenuCloseTimerRef.current) {
+            window.clearTimeout(layerMenuCloseTimerRef.current);
+            layerMenuCloseTimerRef.current = null;
+        }
+        setIsLayerMenuOpen(true);
+    };
+
+    const handleLayerMouseLeave = () => {
+        layerMenuCloseTimerRef.current = window.setTimeout(() => {
+            setIsLayerMenuOpen(false);
+        }, 250);
+    };
+
     return (
-        <div className={`ems-route-map-wrapper ${isExpanded ? 'ems-route-map-wrapper--expanded' : ''}`}>
-            {/* Map Top Bar Controls */}
-            <div className="ems-route-map__toolbar">
-                <div className="ems-route-map__layer-select" role="group" aria-label="Map Tile Layer">
-                    {/* Compact Select Dropdown on Mobile */}
-                    <select
-                        className="ems-map-layer-dropdown"
-                        value={baseLayer}
-                        onChange={(e) => setBaseLayer(e.target.value as any)}
-                        aria-label="Select base map tile layer"
-                    >
-                        <option value="opentopo">OpenTopo</option>
-                        <option value="cyclosm">CyclOSM Topo</option>
-                        <option value="esri">ESRI Topo</option>
-                        <option value="osm">Street</option>
-                        {osMapsApiKey && <option value="os">OS Leisure</option>}
-                    </select>
+        <div
+            className={`ems-route-map-wrapper ${isFocusMode ? 'ems-route-map-wrapper--focused' : ''}`}
+            onTransitionEnd={(e) => {
+                if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('ems-route-map-canvas')) {
+                    mapInstanceRef.current?.invalidateSize();
+                }
+            }}
+        >
+            {/* Top-Left: Discrete Map Layer Switcher */}
+            <div
+                ref={layerControlRef}
+                className="ems-map-layer-control"
+                onMouseEnter={handleLayerMouseEnter}
+                onMouseLeave={handleLayerMouseLeave}
+                onMouseDown={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    className={`ems-map-floating-btn ${isLayerMenuOpen ? 'ems-map-floating-btn--active' : ''}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsLayerMenuOpen((prev) => !prev);
+                    }}
+                    title="Select Map Layer"
+                    aria-label="Select map layer"
+                    aria-expanded={isLayerMenuOpen}
+                >
+                    <FontAwesomeIcon icon={faLayerGroup} />
+                </button>
 
-                    {/* Desktop Button Group */}
-                    <div className="ems-map-layer-buttons">
-                        <button
-                            type="button"
-                            className={`ems-map-btn ${baseLayer === 'opentopo' ? 'ems-map-btn--active' : ''}`}
-                            onClick={() => setBaseLayer('opentopo')}
-                            title="Topographic Contours (OpenTopoMap)"
-                        >
-                            OpenTopo
-                        </button>
-                        <button
-                            type="button"
-                            className={`ems-map-btn ${baseLayer === 'cyclosm' ? 'ems-map-btn--active' : ''}`}
-                            onClick={() => setBaseLayer('cyclosm')}
-                            title="Outdoor Topo with Contours & Trails (CyclOSM)"
-                        >
-                            CyclOSM Topo
-                        </button>
-                        <button
-                            type="button"
-                            className={`ems-map-btn ${baseLayer === 'esri' ? 'ems-map-btn--active' : ''}`}
-                            onClick={() => setBaseLayer('esri')}
-                            title="ESRI World Topo with Shaded Relief & Contours"
-                        >
-                            ESRI Topo
-                        </button>
-                        <button
-                            type="button"
-                            className={`ems-map-btn ${baseLayer === 'osm' ? 'ems-map-btn--active' : ''}`}
-                            onClick={() => setBaseLayer('osm')}
-                            title="Standard OpenStreetMap"
-                        >
-                            Street
-                        </button>
-                        {osMapsApiKey && (
-                            <button
-                                type="button"
-                                className={`ems-map-btn ${baseLayer === 'os' ? 'ems-map-btn--active' : ''}`}
-                                onClick={() => setBaseLayer('os')}
-                                title="Official Ordnance Survey 1:25k Explorer / 1:50k Landranger"
-                            >
-                                OS Leisure
-                            </button>
-                        )}
+                {isLayerMenuOpen && (
+                    <div className="ems-map-layer-flyout" role="menu" aria-label="Map Tile Layers">
+                        {BASE_LAYERS.map((layer) => {
+                            if (layer.requiresKey && !osMapsApiKey) return null;
+                            const isActive = baseLayer === layer.id;
+                            return (
+                                <button
+                                    key={layer.id}
+                                    type="button"
+                                    role="menuitem"
+                                    className={`ems-map-layer-option ${isActive ? 'ems-map-layer-option--active' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setBaseLayer(layer.id);
+                                        setIsLayerMenuOpen(false);
+                                    }}
+                                    title={layer.title}
+                                >
+                                    <span className="ems-map-layer-option-name">{layer.label}</span>
+                                    {isActive && <FontAwesomeIcon icon={faCheck} className="ems-map-layer-check" />}
+                                </button>
+                            );
+                        })}
                     </div>
-                </div>
+                )}
+            </div>
 
-                <div className="ems-route-map__actions">
-                    <button
-                        type="button"
-                        className="ems-map-action-btn"
-                        onClick={fitEntireRoute}
-                        title="Zoom to Entire Expedition Route"
-                    >
-                        <FontAwesomeIcon icon={faLocationCrosshairs} /> Fit All
-                    </button>
+            {/* Top-Right: Action Dock */}
+            <div
+                ref={actionDockRef}
+                className="ems-map-action-dock"
+                onMouseDown={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    className="ems-map-dock-btn"
+                    onClick={handleZoomIn}
+                    title="Zoom in"
+                    aria-label="Zoom in"
+                >
+                    <FontAwesomeIcon icon={faPlus} />
+                </button>
 
-                    <button
-                        type="button"
-                        className="ems-map-action-btn"
-                        onClick={() => {
-                            setIsExpanded(!isExpanded);
-                            setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
-                        }}
-                        title={isExpanded ? 'Collapse Map' : 'Expand Map on Mobile'}
-                    >
-                        <FontAwesomeIcon icon={isExpanded ? faCompress : faExpand} />
-                        <span className="ems-hide-sm">{isExpanded ? 'Collapse' : 'Expand'}</span>
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    className="ems-map-dock-btn"
+                    onClick={handleZoomOut}
+                    title="Zoom out"
+                    aria-label="Zoom out"
+                >
+                    <FontAwesomeIcon icon={faMinus} />
+                </button>
+
+                <button
+                    type="button"
+                    className="ems-map-dock-btn"
+                    onClick={fitEntireRoute}
+                    title="Fit Entire Route"
+                    aria-label="Fit all"
+                >
+                    <FontAwesomeIcon icon={faLocationCrosshairs} />
+                </button>
+
+                <button
+                    type="button"
+                    className={`ems-map-dock-btn ${isFocusMode ? 'ems-map-dock-btn--active' : ''}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFocusMode();
+                    }}
+                    title={isFocusMode ? 'Exit Focus Mode (Esc)' : 'Focus Mode (Maximize Map)'}
+                    aria-label={isFocusMode ? 'Exit focus mode' : 'Focus mode'}
+                    aria-pressed={isFocusMode}
+                >
+                    <FontAwesomeIcon icon={isFocusMode ? faCompress : faExpand} />
+                </button>
             </div>
 
             {/* Map Div */}
@@ -905,6 +1041,7 @@ export function RouteMap({
                 key={isBng ? 'bng-map' : 'mercator-map'}
                 ref={mapContainerRef}
                 className="ems-route-map-canvas"
+                tabIndex={-1}
             />
 
             {/* Subtle Map Interaction Hint: Mouse desktop tip vs. Touch device tip */}

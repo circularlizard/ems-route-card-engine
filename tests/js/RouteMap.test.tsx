@@ -18,8 +18,16 @@ vi.mock('leaflet', async () => {
             fitBounds: vi.fn(),
             getCenter: vi.fn(() => ({ lat: 54.5, lng: -3.2 })),
             getZoom: vi.fn(() => 7),
+            zoomIn: vi.fn(),
+            zoomOut: vi.fn(),
             invalidateSize: vi.fn(),
         })),
+        DomEvent: {
+            disableClickPropagation: vi.fn(),
+            disableScrollPropagation: vi.fn(),
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        },
         control: {
             zoom: vi.fn(() => ({
                 addTo: vi.fn(),
@@ -116,7 +124,7 @@ describe('RouteMap Component', () => {
         },
     ];
 
-    it('renders standard base layer buttons and Fit All button', () => {
+    it('renders discrete floating controls: Map Layer button and Action Dock', () => {
         render(
             <RouteMap
                 vertices={mockVertices}
@@ -126,16 +134,42 @@ describe('RouteMap Component', () => {
             />
         );
 
-        expect(screen.getByRole('button', { name: /OpenTopo/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /CyclOSM Topo/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /ESRI Topo/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Street/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Fit All/i })).toBeInTheDocument();
-        // OS Leisure should NOT be visible without osMapsApiKey
-        expect(screen.queryByRole('button', { name: /OS Leisure/i })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Select map layer/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Zoom in/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Zoom out/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Fit all/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Focus mode/i })).toBeInTheDocument();
     });
 
-    it('displays OS Leisure button when osMapsApiKey is supplied and allows switching to it', () => {
+    it('opens layer flyout on click and allows selecting layers', () => {
+        render(
+            <RouteMap
+                vertices={mockVertices}
+                legs={mockLegs}
+                activeLegIndex={0}
+                onSelectLeg={vi.fn()}
+            />
+        );
+
+        const layerBtn = screen.getByRole('button', { name: /Select map layer/i });
+        fireEvent.click(layerBtn);
+
+        expect(screen.getByRole('menuitem', { name: /OpenTopo/i })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /CyclOSM/i })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /Street/i })).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /ESRI/i })).toBeInTheDocument();
+        // OS Leisure should NOT be visible without osMapsApiKey
+        expect(screen.queryByRole('menuitem', { name: /OS Leisure/i })).not.toBeInTheDocument();
+
+        // Switching base layer
+        const cyclosmBtn = screen.getByRole('menuitem', { name: /CyclOSM/i });
+        fireEvent.click(cyclosmBtn);
+
+        // Menu closes on select
+        expect(screen.queryByRole('menuitem', { name: /CyclOSM/i })).not.toBeInTheDocument();
+    });
+
+    it('displays OS Leisure option when osMapsApiKey is supplied and allows switching to it', () => {
         render(
             <RouteMap
                 vertices={mockVertices}
@@ -146,11 +180,51 @@ describe('RouteMap Component', () => {
             />
         );
 
-        const osBtn = screen.getByRole('button', { name: /OS Leisure/i });
+        const layerBtn = screen.getByRole('button', { name: /Select map layer/i });
+        fireEvent.click(layerBtn);
+
+        const osBtn = screen.getByRole('menuitem', { name: /OS Leisure/i });
         expect(osBtn).toBeInTheDocument();
 
         fireEvent.click(osBtn);
-        expect(osBtn).toHaveClass('ems-map-btn--active');
+        // Menu closes after select
+        expect(screen.queryByRole('menuitem', { name: /OS Leisure/i })).not.toBeInTheDocument();
+    });
+
+    it('toggles focus mode on click and exits when Esc is pressed', () => {
+        const handleToggleFocus = vi.fn();
+        const { rerender } = render(
+            <RouteMap
+                vertices={mockVertices}
+                legs={mockLegs}
+                activeLegIndex={0}
+                onSelectLeg={vi.fn()}
+                isFocusMode={false}
+                onToggleFocusMode={handleToggleFocus}
+            />
+        );
+
+        const focusBtn = screen.getByRole('button', { name: /Focus mode/i });
+        fireEvent.click(focusBtn);
+        expect(handleToggleFocus).toHaveBeenCalledWith(true);
+
+        // When focus mode is active
+        rerender(
+            <RouteMap
+                vertices={mockVertices}
+                legs={mockLegs}
+                activeLegIndex={0}
+                onSelectLeg={vi.fn()}
+                isFocusMode={true}
+                onToggleFocusMode={handleToggleFocus}
+            />
+        );
+
+        expect(screen.getByRole('button', { name: /Exit focus mode/i })).toBeInTheDocument();
+
+        // Pressing Escape exits focus mode
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(handleToggleFocus).toHaveBeenCalledWith(false);
     });
 
     it('renders the subtle map interaction hint', () => {

@@ -70,6 +70,7 @@ export function RouteCardBuilder({
     const [ghostSplitVertexIndex, setGhostSplitVertexIndex] = useState<number | null>(null);
     const [draggingCheckpoint, setDraggingCheckpoint] = useState<{ checkpointIndex: number; vertexIndex: number } | null>(null);
     const [autoFocusSplitField, setAutoFocusSplitField] = useState<'start' | 'end' | null>(null);
+    const [isMapFocusMode, setIsMapFocusMode] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -145,6 +146,44 @@ export function RouteCardBuilder({
     const routeTitleId = useId();
     const gpxUploadId = useId();
     const legCardsContainerRef = useRef<HTMLDivElement | null>(null);
+    const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
+
+    // Dynamically measure sticky header height & admin bar offset to guarantee the map never scrolls under the sticky header
+    useEffect(() => {
+        const updateStickyOffsets = () => {
+            if (typeof document === 'undefined') return;
+
+            const adminBar = document.getElementById('wpadminbar');
+            const adminBarHeight = adminBar
+                ? Math.round(adminBar.getBoundingClientRect().height)
+                : (document.body.classList.contains('admin-bar') ? (window.innerWidth <= 782 ? 46 : 32) : 0);
+
+            document.documentElement.style.setProperty('--ems-sticky-top-offset', `${adminBarHeight}px`);
+
+            if (stickyHeaderRef.current) {
+                const headerHeight = Math.round(stickyHeaderRef.current.getBoundingClientRect().height);
+                if (headerHeight > 0) {
+                    document.documentElement.style.setProperty('--ems-sticky-header-height', `${headerHeight}px`);
+                }
+            }
+        };
+
+        updateStickyOffsets();
+
+        let ro: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined' && stickyHeaderRef.current) {
+            ro = new ResizeObserver(() => {
+                updateStickyOffsets();
+            });
+            ro.observe(stickyHeaderRef.current);
+        }
+
+        window.addEventListener('resize', updateStickyOffsets);
+        return () => {
+            if (ro) ro.disconnect();
+            window.removeEventListener('resize', updateStickyOffsets);
+        };
+    }, [isMobileStatsExpanded]);
 
     const getApiUrl = (endpoint: string) => {
         const config = window.emsRouteCardStudioConfig;
@@ -503,7 +542,7 @@ export function RouteCardBuilder({
             )}
 
             {/* Sticky Header: Route Header & Actions + Compact Info Bar with View Control */}
-            <div className="ems-builder-sticky-header">
+            <div ref={stickyHeaderRef} className="ems-builder-sticky-header">
                 {/* Top Toolbar */}
                 <div className="ems-builder-toolbar">
                     <div className="ems-builder-title-group">
@@ -724,9 +763,9 @@ export function RouteCardBuilder({
 
             {/* Split View: Map + Cards */}
             {legs.length > 0 && viewMode === 'split' && (
-                <div className="ems-studio-split-layout">
+                <div className={`ems-studio-split-layout ${isMapFocusMode ? 'ems-studio-split-layout--map-focused' : ''}`}>
                     {/* Left Pane: Interactive Map & Elevation Profile */}
-                    <div className="ems-studio-pane ems-studio-pane--map">
+                    <div className={`ems-studio-pane ems-studio-pane--map ${isMapFocusMode ? 'ems-studio-pane--map-focused' : ''}`}>
                         <RouteMap
                             vertices={vertices}
                             legs={legs}
@@ -743,6 +782,8 @@ export function RouteCardBuilder({
                             hoveredVertexIndex={hoveredVertexIndex}
                             onHoverVertex={handleHoverVertex}
                             hoveredLegIndex={hoveredLegIndex}
+                            isFocusMode={isMapFocusMode}
+                            onToggleFocusMode={setIsMapFocusMode}
                         />
 
                         <RouteElevationProfile

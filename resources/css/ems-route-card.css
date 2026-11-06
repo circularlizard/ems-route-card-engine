@@ -542,7 +542,7 @@
 
 :root {
     --ems-sticky-top-offset: 0px;
-    --ems-sticky-header-height: 98px;
+    --ems-sticky-header-height: 140px;
 }
 
 body.admin-bar,
@@ -563,8 +563,8 @@ body.admin-bar,
 .ems-builder-sticky-header {
     position: -webkit-sticky;
     position: sticky;
-    top: 0;
-    z-index: 1000; /* Above Leaflet map panes (z-index 400-800) */
+    top: var(--ems-sticky-top-offset, 0px);
+    z-index: 1200; /* Stays securely above Leaflet controls and map canvas */
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -578,9 +578,9 @@ body.admin-bar,
     box-sizing: border-box;
 }
 
-/* Offset by 32px when WordPress Admin Bar is present on desktop */
-body.admin-bar .ems-builder-sticky-header {
-    top: 32px;
+body.admin-bar .ems-builder-sticky-header,
+.wp-admin .ems-builder-sticky-header {
+    top: var(--ems-sticky-top-offset, 32px);
 }
 
 .ems-builder-sticky-header .ems-builder-toolbar {
@@ -954,112 +954,210 @@ body.admin-bar .ems-builder-sticky-header {
 .ems-studio-pane {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .ems-studio-pane--map {
     position: sticky;
-    top: calc(var(--ems-sticky-top-offset, 32px) + var(--ems-sticky-header-height, 98px) + 12px);
-    max-height: calc(100vh - var(--ems-sticky-top-offset, 32px) - var(--ems-sticky-header-height, 98px) - 24px);
-    overflow-y: auto;
+    top: calc(var(--ems-sticky-top-offset, 0px) + var(--ems-sticky-header-height, 140px) + 12px);
+    max-height: calc(100vh - var(--ems-sticky-top-offset, 0px) - var(--ems-sticky-header-height, 140px) - 24px);
+    overflow-y: visible;
     align-self: start;
     z-index: 10;
+    min-width: 0;
+    width: 100%;
+}
+
+.ems-studio-pane--map-focused {
+    overflow-y: hidden !important;
+}
+
+.ems-studio-pane--map-focused .ems-elevation-profile-container {
+    display: none !important;
 }
 
 /* Interactive Map Container */
 .ems-route-map-wrapper {
+    position: relative;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.ems-route-map__toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 6px 10px;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.ems-route-map__layer-select {
-    background: #f1f5f9;
-    padding: 2px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    border: 1px solid #e2e8f0;
-}
-
-.ems-map-layer-dropdown {
-    display: none;
-}
-
-.ems-map-layer-buttons {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-}
-
-.ems-map-btn {
-    background: transparent;
-    border: none;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-}
-
-.ems-map-btn:hover {
-    color: #0f172a;
-}
-
-.ems-map-btn--active {
-    background: #ffffff;
-    color: #0f172a;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.ems-route-map__actions {
-    display: flex;
-    gap: 4px;
-}
-
-.ems-map-action-btn {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #334155;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.ems-map-action-btn:hover {
-    background: #f1f5f9;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .ems-route-map-canvas {
     height: 380px;
     width: 100%;
+    max-width: 100%;
+    position: relative;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.ems-route-map-wrapper--expanded .ems-route-map-canvas {
-    height: 580px;
+.ems-route-map-wrapper--focused .ems-route-map-canvas {
+    height: calc(100vh - var(--ems-sticky-top-offset, 0px) - var(--ems-sticky-header-height, 140px) - 48px);
+    min-height: 580px;
+}
+
+/* Leaflet Container Focus Outline Reset */
+.leaflet-container {
+    outline: none !important;
+}
+
+.leaflet-container:focus {
+    outline: none !important;
+}
+
+/* Top-Left: Discrete Map Layer Switcher (Floating Overlaid inside Canvas) */
+.ems-map-layer-control {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ems-map-floating-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
+    color: #475569;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.ems-map-floating-btn:hover,
+.ems-map-floating-btn--active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+}
+
+.ems-map-layer-flyout {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 140px;
+    animation: emsLayerFadeIn 0.15s ease-out;
+}
+
+@keyframes emsLayerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ems-map-layer-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.ems-map-layer-option:hover {
+    background: rgba(241, 245, 249, 0.9);
+    color: #0f172a;
+}
+
+.ems-map-layer-option--active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.ems-map-layer-check {
+    font-size: 11px;
+    color: #2563eb;
+    margin-left: 8px;
+}
+
+/* Top-Right: Action Dock (Vertical Pill, Floating Overlaid inside Canvas) */
+.ems-map-action-dock {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ems-map-dock-btn {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    color: #475569;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    padding: 0;
+}
+
+.ems-map-dock-btn:last-child {
+    border-bottom: none;
+}
+
+.ems-map-dock-btn:hover {
+    background: rgba(241, 245, 249, 0.9);
+    color: #0f172a;
+}
+
+.ems-map-dock-btn--active {
+    background: #eff6ff;
+    color: #2563eb;
 }
 
 /* Custom Leaflet Marker Badges */
@@ -1526,7 +1624,7 @@ body.admin-bar .ems-builder-sticky-header {
     transition: all 0.15s ease-in-out;
     border-left: 3px solid #cbd5e1;
     cursor: pointer;
-    scroll-margin-top: calc(var(--ems-sticky-top-offset, 32px) + var(--ems-sticky-header-height, 98px) + 20px);
+    scroll-margin-top: calc(var(--ems-sticky-top-offset, 0px) + var(--ems-sticky-header-height, 140px) + 20px);
     scroll-margin-bottom: 20px;
 }
 
@@ -2646,25 +2744,13 @@ textarea.ems-auto-expand::placeholder,
         padding: 6px 8px;
     }
 
-    /* Map Layer Switcher on Mobile */
-    .ems-map-layer-dropdown {
-        display: block;
-        padding: 4px 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #0f172a;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        max-width: 130px;
-    }
-
-    .ems-map-layer-buttons {
-        display: none !important;
-    }
-
     .ems-route-map-canvas {
-        height: 250px;
+        height: 280px;
+    }
+
+    .ems-route-map-wrapper--focused .ems-route-map-canvas {
+        height: 70vh;
+        min-height: 380px;
     }
 
     .ems-elevation-profile-svg {
