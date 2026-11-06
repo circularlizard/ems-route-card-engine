@@ -3,7 +3,7 @@
  * Enables zero-latency leg splitting, merging, and smart re-import reconciliation.
  */
 
-import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff } from '../types/route-card';
+import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff, RouteHeaderData } from '../types/route-card';
 
 /**
  * Calculates Grid and approximate Magnetic Bearing between two Easting/Northing points.
@@ -88,6 +88,126 @@ export function formatHoursMins(mins: number): string {
     const h = Math.floor(totalM / 60);
     const m = totalM % 60;
     return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+/**
+ * Calculates dynamic Naismith walking time per leg using user-configured base speed and elevation penalty:
+ * Walk Time (mins) = round( (Distance (km) / Base Speed (km/h) * 60) + (Height Climbed (m) / 10 * Elevation Penalty Mins) )
+ */
+export function calculateDynamicWalkTime(
+    distanceKm: number,
+    ascentM: number,
+    speedKmh: number = 4.0,
+    elevationPenaltyMinsPer10m: number = 1.0,
+    flatOverride: boolean = false
+): number {
+    const safeSpeed = speedKmh > 0 ? speedKmh : 4.0;
+    const distMins = (distanceKm / safeSpeed) * 60.0;
+    const climbMins = flatOverride ? 0 : (ascentM / 10.0) * (elevationPenaltyMinsPer10m ?? 1.0);
+    return Math.max(1, Math.round(distMins + climbMins));
+}
+
+/**
+ * Adds minutes to an "HH:MM" timestamp and returns the resulting "HH:MM" timestamp (wrapped to 24h).
+ */
+export function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
+    const parts = (timeStr || '09:00').split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+
+    let total = h * 60 + m + Math.round(minutesToAdd || 0);
+    total = ((total % 1440) + 1440) % 1440;
+
+    const outH = Math.floor(total / 60);
+    const outM = total % 60;
+    return `${String(outH).padStart(2, '0')}:${String(outM).padStart(2, '0')}`;
+}
+
+export interface LegScheduleItem {
+    legNumber: number;
+    walkTimeMinutes: number;
+    stopsMinutes: number;
+    totalDurationMinutes: number;
+    departsFrom: string; // "HH:MM"
+    arrivesAt: string;   // "HH:MM" (ETA)
+    departsAt: string;   // "HH:MM" (ETD)
+}
+
+/**
+ * Computes cascading schedule across all journey legs (From -> Arrive -> Stops -> Depart).
+ */
+export function calculateLegSchedule(
+    legs: RouteLeg[],
+    settingOutTime: string = '09:00',
+    speedKmh: number = 4.0,
+    elevationPenaltyMinsPer10m: number = 1.0
+): LegScheduleItem[] {
+    const schedule: LegScheduleItem[] = [];
+    let currentDeparture = settingOutTime || '09:00';
+
+    for (let i = 0; i < legs.length; i++) {
+        const leg = legs[i];
+        const walkTime = calculateDynamicWalkTime(
+            leg.distance_km,
+            leg.ascent_m,
+            speedKmh,
+            elevationPenaltyMinsPer10m,
+            leg.flat_override
+        );
+        const stops = (leg.rest_minutes || 0) + (leg.activity_minutes || 0);
+        const totalDuration = walkTime + stops;
+        const eta = addMinutesToTime(currentDeparture, walkTime);
+        const etd = addMinutesToTime(eta, stops);
+
+        schedule.push({
+            legNumber: leg.leg_number,
+            walkTimeMinutes: walkTime,
+            stopsMinutes: stops,
+            totalDurationMinutes: totalDuration,
+            departsFrom: currentDeparture,
+            arrivesAt: eta,
+            departsAt: etd,
+        });
+
+        currentDeparture = etd;
+    }
+
+    return schedule;
+}
+
+/**
+ * Creates default RouteHeaderData for a given day.
+ */
+export function createDefaultHeaderData(
+    dayNumber: number = 1,
+    expeditionId?: string | number | null
+): RouteHeaderData {
+    const today = new Date();
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + (dayNumber - 1));
+    const dateStr = targetDate.toISOString().slice(0, 10);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = dayNames[targetDate.getDay()];
+
+    return {
+        expeditionId: expeditionId ?? null,
+        aim: '',
+        date: dateStr,
+        dayOfWeek,
+        unitName: '',
+        teamName: '',
+        teamMembers: [],
+        supervisorName: '',
+        supervisorPhone: '',
+        backupName: '',
+        backupPhone: '',
+        settingOutTime: '09:00',
+        baseWalkingSpeedKmh: 4.0,
+        elevationPenaltyMinsPer10m: 1.0,
+        startPointDescription: '',
+        startGridRef: '',
+        emergencyPlan: '',
+    };
 }
 
 /**

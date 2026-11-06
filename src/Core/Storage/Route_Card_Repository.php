@@ -107,6 +107,19 @@ class Route_Card_Repository {
         $now = current_time( 'mysql' );
         $id  = isset( $data['id'] ) ? (int) $data['id'] : 0;
 
+        // If ID is not set or 0, check if card already exists for (expedition_id, team_id, day_number)
+        if ( $id <= 0 && ! empty( $data['expedition_id'] ) && ! empty( $data['team_id'] ) && ! empty( $data['day_number'] ) ) {
+            $existing = $this->findByExpeditionTeamDay(
+                (int) $data['expedition_id'],
+                (int) $data['team_id'],
+                (int) $data['day_number']
+            );
+            if ( $existing && ! empty( $existing['id'] ) ) {
+                $id = (int) $existing['id'];
+                $data['id'] = $id;
+            }
+        }
+
         if ( $id > 0 ) {
             // Optimistic concurrency check
             if ( ! empty( $expectedUpdatedAt ) ) {
@@ -281,6 +294,20 @@ class Route_Card_Repository {
         }
         if ( ! empty( $row['route_data'] ) && is_string( $row['route_data'] ) ) {
             $row['route_data'] = json_decode( $row['route_data'], true );
+        }
+
+        // Expose legs_data and legs directly on the card array for seamless access
+        if ( ! empty( $row['route_data'] ) && is_array( $row['route_data'] ) ) {
+            if ( ! empty( $row['route_data']['legs'] ) && is_array( $row['route_data']['legs'] ) ) {
+                $row['legs_data'] = $row['route_data']['legs'];
+                $row['legs']      = $row['route_data']['legs'];
+            } elseif ( ! empty( $row['route_data']['legs_data'] ) && is_array( $row['route_data']['legs_data'] ) ) {
+                $row['legs_data'] = $row['route_data']['legs_data'];
+                $row['legs']      = $row['route_data']['legs_data'];
+            } elseif ( array_is_list( $row['route_data'] ) ) {
+                $row['legs_data'] = $row['route_data'];
+                $row['legs']      = $row['route_data'];
+            }
         }
 
         return $row;

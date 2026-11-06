@@ -11,47 +11,51 @@ describe('RouteCardBuilder Totals Warning Chips', () => {
         localStorage.clear();
     });
 
-    const mockUploadResponse = (walkingMins: number, restMins: number) => ({
-        success: true,
-        data: {
-            route_title: 'Highland Trail',
-            total_distance_km: 15.0,
-            total_ascent_m: 400,
-            estimated_walking_minutes: walkingMins,
-            vertex_count: 20,
-            legs: [
-                {
-                    leg_number: 1,
-                    start_vertex_index: 0,
-                    end_vertex_index: 19,
-                    start_name: 'Start Point',
-                    end_name: 'End Point',
-                    start_desc: '',
-                    end_desc: '',
-                    start_grid_ref: 'NN 100 200',
-                    end_grid_ref: 'NN 150 250',
-                    start_elevation_m: 100,
-                    end_elevation_m: 300,
-                    distance_km: 15.0,
-                    ascent_m: 400,
-                    descent_m: 200,
-                    grid_bearing: 45,
-                    magnetic_bearing: 45,
-                    walking_minutes: walkingMins,
-                    rest_minutes: restMins,
-                    activity_minutes: 0,
-                    activity_notes: '',
-                    flat_override: false,
-                    route_description: 'Follow distinct footpath up the glen to col',
-                    escape_route: 'Bail south along valley floor to road',
-                },
-            ],
-            vertices: [
-                { index: 0, lat: 56.5, lon: -4.5, easting: 200000, northing: 700000, grid_ref_6: 'NN 100 200', grid_ref_8: 'NN 1000 2000', ele_dem: 100, dist_from_start_m: 0, ascent_from_start_m: 0, descent_from_start_m: 0 },
-                { index: 19, lat: 56.6, lon: -4.4, easting: 215000, northing: 715000, grid_ref_6: 'NN 150 250', grid_ref_8: 'NN 1500 2500', ele_dem: 300, dist_from_start_m: 15000, ascent_from_start_m: 400, descent_from_start_m: 200 },
-            ],
-        },
-    });
+    const mockUploadResponse = (walkingMins: number, restMins: number) => {
+        // Derive distance_km to match walkingMins at default 4.0 km/h so dynamic Naismith aligns
+        const distKm = Math.round(((walkingMins / 60.0) * 4.0) * 100) / 100;
+        return {
+            success: true,
+            data: {
+                route_title: 'Highland Trail',
+                total_distance_km: distKm,
+                total_ascent_m: 0,
+                estimated_walking_minutes: walkingMins,
+                vertex_count: 20,
+                legs: [
+                    {
+                        leg_number: 1,
+                        start_vertex_index: 0,
+                        end_vertex_index: 19,
+                        start_name: 'Start Point',
+                        end_name: 'End Point',
+                        start_desc: '',
+                        end_desc: '',
+                        start_grid_ref: 'NN 100 200',
+                        end_grid_ref: 'NN 150 250',
+                        start_elevation_m: 100,
+                        end_elevation_m: 300,
+                        distance_km: distKm,
+                        ascent_m: 0,
+                        descent_m: 0,
+                        grid_bearing: 45,
+                        magnetic_bearing: 45,
+                        walking_minutes: walkingMins,
+                        rest_minutes: restMins,
+                        activity_minutes: 0,
+                        activity_notes: '',
+                        flat_override: false,
+                        route_description: 'Follow distinct footpath up the glen to col',
+                        escape_route: 'Bail south along valley floor to road',
+                    },
+                ],
+                vertices: [
+                    { index: 0, lat: 56.5, lon: -4.5, easting: 200000, northing: 700000, grid_ref_6: 'NN 100 200', grid_ref_8: 'NN 1000 2000', ele_dem: 100, dist_from_start_m: 0, ascent_from_start_m: 0, descent_from_start_m: 0 },
+                    { index: 19, lat: 56.6, lon: -4.4, easting: 215000, northing: 715000, grid_ref_6: 'NN 150 250', grid_ref_8: 'NN 1500 2500', ele_dem: 300, dist_from_start_m: distKm * 1000, ascent_from_start_m: 0, descent_from_start_m: 0 },
+                ],
+            },
+        };
+    };
 
     it('shows "too short" warning chip when stops are less than 15% of total duration', async () => {
         // Walking 360m (6h), Stops 15m -> Total 375m. Stops % = 15/375 = 4% (< 15%)

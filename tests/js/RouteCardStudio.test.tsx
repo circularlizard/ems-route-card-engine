@@ -69,7 +69,7 @@ describe('RouteCardStudio', () => {
         // Check RouteCardBuilder elements
         expect(screen.getByRole('button', { name: /Day 1/i })).toBeInTheDocument();
         expect(screen.getByText(/Save Draft/i)).toBeInTheDocument();
-        expect(screen.getByText(/Export PDF/i)).toBeInTheDocument();
+        expect(screen.getByText(/Print \/ Save as PDF/i)).toBeInTheDocument();
     });
 
     it('switches to DEM Tile Manager tab when clicked', async () => {

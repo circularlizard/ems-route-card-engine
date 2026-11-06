@@ -2,7 +2,7 @@ import { useId, useRef, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { RouteLeg, RouteVertex } from '../types/route-card';
-import { formatHoursMins } from '../utils/route-calculations';
+import { formatHoursMins, LegScheduleItem } from '../utils/route-calculations';
 
 interface RouteLegCardProps {
     leg: RouteLeg;
@@ -19,6 +19,7 @@ interface RouteLegCardProps {
     onPrevLeg?: () => void;
     onNextLeg?: () => void;
     autoFocusField?: 'start' | 'end' | null;
+    scheduleItem?: LegScheduleItem;
 }
 
 export function RouteLegCard({
@@ -36,6 +37,7 @@ export function RouteLegCard({
     onPrevLeg,
     onNextLeg,
     autoFocusField,
+    scheduleItem,
 }: RouteLegCardProps) {
     const cardRef = useRef<HTMLDivElement | null>(null);
     const startNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -180,6 +182,8 @@ export function RouteLegCard({
         ? `+${Math.round(leg.ascent_m)}m / -${Math.round(leg.descent_m)}m`
         : `+${Math.round(leg.ascent_m)}m`;
 
+    const walkMins = scheduleItem ? scheduleItem.walkTimeMinutes : leg.walking_minutes;
+
     // Collapsed Accordion Row (Inactive legs on desktop when expandAllLegs is false)
     if (!isCardExpanded) {
         return (
@@ -210,7 +214,8 @@ export function RouteLegCard({
 
                 <div className="ems-leg-summary-right">
                     <span className="ems-leg-summary-stats font-mono">
-                        {leg.distance_km} km • +{Math.round(leg.ascent_m)}m • {formatHoursMins(leg.walking_minutes)}
+                        {leg.distance_km} km • +{Math.round(leg.ascent_m)}m • {formatHoursMins(walkMins)}
+                        {scheduleItem && ` • ${scheduleItem.departsFrom} – ${scheduleItem.departsAt}`}
                     </span>
                     {hasLegIssue && (
                         <span
@@ -292,7 +297,15 @@ export function RouteLegCard({
                         <span className="ems-stat-sep">•</span>
                         <span className="ems-stat-num">{climbDescentStr}</span>
                         <span className="ems-stat-sep">•</span>
-                        <span className="ems-stat-num">{formatHoursMins(leg.walking_minutes)} walk</span>
+                        <span className="ems-stat-num">{formatHoursMins(walkMins)} walk</span>
+                        {scheduleItem && (
+                            <>
+                                <span className="ems-stat-sep">•</span>
+                                <span className="ems-stat-schedule" title={`Starts ${scheduleItem.departsFrom}, Finishes ${scheduleItem.departsAt} (inc stops)`}>
+                                    Start <b>{scheduleItem.departsFrom}</b> → End <b>{scheduleItem.departsAt}</b>
+                                </span>
+                            </>
+                        )}
                         {leg.distance_km > 3.5 && (
                             <>
                                 <span className="ems-stat-sep">•</span>

@@ -55,6 +55,26 @@ export interface EnrichedRouteData {
     warnings: string[];
 }
 
+export interface RouteHeaderData {
+    expeditionId?: string | number | null;
+    aim: string;
+    date: string;
+    dayOfWeek?: string;
+    unitName: string;
+    teamName: string;
+    teamMembers: string[];
+    supervisorName: string;
+    supervisorPhone: string;
+    backupName: string;
+    backupPhone: string;
+    settingOutTime: string;
+    baseWalkingSpeedKmh: number;
+    elevationPenaltyMinsPer10m: number;
+    startPointDescription: string;
+    startGridRef: string;
+    emergencyPlan: string;
+}
+
 export interface RouteCardRecord {
     id?: number;
     expedition_id: number;
@@ -62,6 +82,7 @@ export interface RouteCardRecord {
     day_number: number;
     route_title: string;
     status: 'draft' | 'submitted' | 'approved' | 'changes_requested';
+    header_data?: RouteHeaderData;
     route_data: {
         total_distance_km: number;
         total_ascent_m: number;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId, useCallback } from 'react';
+import { useState, useEffect, useRef, useId, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUpload,
@@ -6,7 +6,6 @@ import {
     faTable,
     faMapLocationDot,
     faTrashCan,
-    faFilePdf,
     faCircleNotch,
     faRotateLeft,
     faCheck,
@@ -14,15 +13,18 @@ import {
     faChevronRight,
     faExpand,
     faCompress,
+    faPrint,
 } from '@fortawesome/free-solid-svg-icons';
 
-import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff } from '../types/route-card';
+import { RouteLeg, RouteVertex, EnrichedRouteData, ReimportLegDiff, RouteHeaderData } from '../types/route-card';
 import {
     splitLegAtVertex,
     mergeLegsWithNext,
     moveCheckpointToVertex,
     reconcileReimport,
     formatHoursMins,
+    calculateLegSchedule,
+    createDefaultHeaderData,
 } from '../utils/route-calculations';
 import { RouteMap } from './RouteMap';
 import { RouteElevationProfile } from './RouteElevationProfile';
@@ -48,6 +50,7 @@ export interface DayRouteData {
     cardId?: number;
     cardStatus: 'draft' | 'submitted' | 'approved' | 'changes_requested';
     undoStack?: RouteLeg[][];
+    headerData?: RouteHeaderData;
 }
 
 export function RouteCardBuilder({
@@ -60,7 +63,7 @@ export function RouteCardBuilder({
     onExportPdf,
 }: RouteCardBuilderProps) {
     const [currentDay, setCurrentDay] = useState(initialDay);
-    const [viewMode, setViewMode] = useState<'split' | 'table' | 'map'>('split');
+    const [viewMode, setViewMode] = useState<'planner' | 'routecard'>('planner');
     const [activeLegIndex, setActiveLegIndex] = useState(0);
     const [hoveredVertexIndex, setHoveredVertexIndex] = useState<number | null>(null);
     const [hoveredLegIndex, setHoveredLegIndex] = useState<number | null>(null);
@@ -104,6 +107,9 @@ export function RouteCardBuilder({
 
     const { routeTitle, vertices, legs, cardId, cardStatus } = activeDayData;
     const undoStack = activeDayData.undoStack || [];
+
+    const defaultHeader = useMemo(() => createDefaultHeaderData(currentDay, expeditionId), [currentDay, expeditionId]);
+    const headerData: RouteHeaderData = activeDayData.headerData || defaultHeader;
 
     // Global keyboard navigation: Alt + ArrowUp/Left (Prev Leg), Alt + ArrowDown/Right (Next Leg)
     useEffect(() => {
@@ -196,7 +202,7 @@ export function RouteCardBuilder({
     };
 
     // Helper to mutate ONLY the active day without affecting other days
-    const updateActiveDay = (patch: Partial<DayRouteData>) => {
+    const updateActiveDay = useCallback((patch: Partial<DayRouteData>) => {
         setDaysData((prev) => {
             const existing = prev[currentDay] || {
                 routeTitle: `Day ${currentDay} Route`,
@@ -220,7 +226,29 @@ export function RouteCardBuilder({
             }
             return updated;
         });
-    };
+    }, [currentDay, expeditionId, teamId]);
+
+    const handleUpdateHeaderData = useCallback((patch: Partial<RouteHeaderData>) => {
+        updateActiveDay({
+            headerData: {
+                ...headerData,
+                ...patch,
+            },
+        });
+    }, [headerData, updateActiveDay]);
+
+    // Auto-derive startGridRef from leg 1 start if not yet set
+    useEffect(() => {
+        if (legs.length > 0 && legs[0]?.start_grid_ref && !activeDayData.headerData?.startGridRef) {
+            updateActiveDay({
+                headerData: {
+                    ...headerData,
+                    startGridRef: legs[0].start_grid_ref,
+                    startPointDescription: headerData.startPointDescription || legs[0].start_name || '',
+                },
+            });
+        }
+    }, [legs, currentDay, activeDayData.headerData?.startGridRef, headerData, updateActiveDay]);
 
     // Load saved route from backend on mount or day switch if not in memory
     useEffect(() => {
@@ -248,6 +276,7 @@ export function RouteCardBuilder({
                                     vertices: d.geometry_data || [],
                                     cardId: d.id,
                                     cardStatus: d.status || 'draft',
+                                    headerData: d.header_data || createDefaultHeaderData(currentDay, expeditionId),
                                     undoStack: [],
                                 },
                             };
@@ -463,6 +492,7 @@ export function RouteCardBuilder({
             cardId: undefined,
             cardStatus: 'draft',
             undoStack: [],
+            headerData: createDefaultHeaderData(currentDay, expeditionId),
         });
         setActiveLegIndex(0);
         setStatusMessage({ text: `Day ${currentDay} route cleared.`, type: 'success' });
@@ -484,9 +514,18 @@ export function RouteCardBuilder({
             day_number: currentDay,
             route_title: routeTitle,
             legs: legs,
+            legs_data: legs,
             total_distance_km: totalDistanceKm,
             total_ascent_m: totalAscentM,
             estimated_walking_minutes: totalWalkingMins,
+            header_data: headerData,
+            route_data: {
+                legs: legs,
+                vertices: vertices,
+                total_distance_km: totalDistanceKm,
+                total_ascent_m: totalAscentM,
+                estimated_walking_minutes: totalWalkingMins,
+            },
         };
 
         try {
@@ -501,7 +540,8 @@ export function RouteCardBuilder({
 
             const json = await res.json();
             if (res.ok && json.success) {
-                updateActiveDay({ cardId: json.card_id });
+                const savedId = json.card_id || json.route_card?.id;
+                updateActiveDay({ cardId: savedId });
                 setStatusMessage({ text: `Day ${currentDay} route card saved as draft.`, type: 'success' });
             } else {
                 throw new Error(json.message || 'Failed to save');
@@ -513,11 +553,140 @@ export function RouteCardBuilder({
         }
     };
 
+    const handlePrint = async () => {
+        let currentCardId = cardId;
+        const config = window.emsRouteCardStudioConfig;
+        const nonce = config?.nonce || '';
+
+        const currentDayPayload = {
+            id: cardId,
+            expedition_id: expeditionId,
+            team_id: teamId,
+            day_number: currentDay,
+            route_title: routeTitle,
+            legs: legs,
+            legs_data: legs,
+            total_distance_km: totalDistanceKm,
+            total_ascent_m: totalAscentM,
+            estimated_walking_minutes: totalWalkingMins,
+            header_data: headerData,
+            route_data: {
+                legs: legs,
+                vertices: vertices,
+                total_distance_km: totalDistanceKm,
+                total_ascent_m: totalAscentM,
+                estimated_walking_minutes: totalWalkingMins,
+            },
+        };
+
+        // Auto-save draft before opening PDF so database is updated
+        try {
+            const res = await fetch(getApiUrl(`card/${cardId || 0}/save`), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify(currentDayPayload),
+            });
+
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && (json.card_id || json.route_card?.id)) {
+                    currentCardId = json.card_id || json.route_card?.id;
+                    updateActiveDay({ cardId: currentCardId });
+                }
+            }
+        } catch (e) {
+            // Ignore network errors in offline/mock mode
+        }
+
+        // Try direct high-fidelity PDF stream via POST preview-pdf
+        try {
+            const activeCards: Array<any> = [];
+            for (let d = 1; d <= totalDays; d++) {
+                const dData = daysData[d];
+                if (d === currentDay) {
+                    activeCards.push(currentDayPayload);
+                } else if (dData && dData.legs && dData.legs.length > 0) {
+                    activeCards.push({
+                        id: dData.cardId,
+                        expedition_id: expeditionId,
+                        team_id: teamId,
+                        day_number: d,
+                        route_title: dData.routeTitle || `Day ${d} Route`,
+                        legs: dData.legs,
+                        legs_data: dData.legs,
+                        header_data: dData.headerData || createDefaultHeaderData(d, expeditionId),
+                        route_data: {
+                            legs: dData.legs,
+                            vertices: dData.vertices,
+                        },
+                    });
+                }
+            }
+
+            const cardsToSend = activeCards.length > 0 ? activeCards : [currentDayPayload];
+
+            const previewRes = await fetch(getApiUrl('card/preview-pdf'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify({ cards: cardsToSend }),
+            });
+
+            if (previewRes.ok) {
+                const blob = await previewRes.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                if (onExportPdf) {
+                    onExportPdf(currentCardId);
+                }
+                return;
+            }
+        } catch (e) {
+            // Fallback to GET endpoint below if preview-pdf fails
+        }
+
+        const pdfEndpoint = currentCardId
+            ? `card/${currentCardId}/pdf?all_days=1`
+            : `card/${expeditionId}/${teamId}/${currentDay}/pdf?all_days=1`;
+
+        const pdfUrl = getApiUrl(pdfEndpoint);
+        const finalUrl = nonce ? `${pdfUrl}&_wpnonce=${encodeURIComponent(nonce)}` : pdfUrl;
+
+        window.open(finalUrl, '_blank');
+
+        if (onExportPdf) {
+            onExportPdf(currentCardId);
+        }
+    };
+
+    // Pacing calculations & cascading schedule
+    const legSchedule = useMemo(() => {
+        return calculateLegSchedule(
+            legs,
+            headerData.settingOutTime || '09:00',
+            headerData.baseWalkingSpeedKmh ?? 4.0,
+            headerData.elevationPenaltyMinsPer10m ?? 1.0
+        );
+    }, [legs, headerData.settingOutTime, headerData.baseWalkingSpeedKmh, headerData.elevationPenaltyMinsPer10m]);
+
     // Summary calculations for active day
     const totalDistanceKm = Math.round(legs.reduce((acc, l) => acc + l.distance_km, 0) * 100) / 100;
     const totalAscentM = Math.round(legs.reduce((acc, l) => acc + l.ascent_m, 0));
-    const totalWalkingMins = legs.reduce((acc, l) => acc + l.walking_minutes, 0);
-    const totalProjectRestMins = legs.reduce((acc, l) => acc + (l.rest_minutes || 0), 0);
+    const totalWalkingMins = useMemo(() => {
+        return legSchedule.length > 0
+            ? legSchedule.reduce((acc, item) => acc + item.walkTimeMinutes, 0)
+            : legs.reduce((acc, l) => acc + (l.walking_minutes || 0), 0);
+    }, [legSchedule, legs]);
+    const totalProjectRestMins = useMemo(() => {
+        return legSchedule.length > 0
+            ? legSchedule.reduce((acc, item) => acc + item.stopsMinutes, 0)
+            : legs.reduce((acc, l) => acc + (l.rest_minutes || 0), 0);
+    }, [legSchedule, legs]);
     const totalExpeditionMins = totalWalkingMins + totalProjectRestMins;
 
     const resolvedDofeLevel: 'bronze' | 'silver' | 'gold' = (
@@ -616,16 +785,6 @@ export function RouteCardBuilder({
                             <FontAwesomeIcon icon={isSaving ? faCircleNotch : faFloppyDisk} spin={isSaving} />
                             Save Draft
                         </button>
-
-                        <button
-                            type="button"
-                            className="ems-btn ems-btn--primary"
-                            onClick={() => onExportPdf?.(cardId)}
-                            disabled={legs.length === 0}
-                        >
-                            <FontAwesomeIcon icon={faFilePdf} />
-                            Export PDF
-                        </button>
                     </div>
                 </div>
 
@@ -689,28 +848,44 @@ export function RouteCardBuilder({
                                 </span>
                             </div>
                         </div>
-
-                        {/* View Switcher */}
-                        <div className="ems-view-toggle">
-                            <button
-                                type="button"
-                                className={`ems-view-btn ${viewMode === 'split' ? 'ems-view-btn--active' : ''}`}
-                                onClick={() => setViewMode('split')}
-                                title="Interactive Map & Journey Cards"
-                            >
-                                <FontAwesomeIcon icon={faMapLocationDot} /> Map View
-                            </button>
-                            <button
-                                type="button"
-                                className={`ems-view-btn ${viewMode === 'table' ? 'ems-view-btn--active' : ''}`}
-                                onClick={() => setViewMode('table')}
-                                title="Full 12-Column DofE Table View"
-                            >
-                                <FontAwesomeIcon icon={faTable} /> Table
-                            </button>
-                        </div>
                     </div>
                 )}
+
+                {/* Mode Switcher & Print Action Bar */}
+                <div className="ems-builder-mode-bar">
+                    <div className="ems-mode-toggle" role="tablist" aria-label="View Mode">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={viewMode === 'planner'}
+                            className={`ems-mode-btn ${viewMode === 'planner' ? 'ems-mode-btn--active' : ''}`}
+                            onClick={() => setViewMode('planner')}
+                            title="Interactive Map & Journey Leg Cards"
+                        >
+                            <FontAwesomeIcon icon={faMapLocationDot} /> Interactive Planner
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={viewMode === 'routecard'}
+                            className={`ems-mode-btn ${viewMode === 'routecard' ? 'ems-mode-btn--active' : ''}`}
+                            onClick={() => setViewMode('routecard')}
+                            title="Comprehensive DofE Route Card Table"
+                        >
+                            <FontAwesomeIcon icon={faTable} /> Route Card
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="ems-btn ems-btn--print"
+                        onClick={handlePrint}
+                        disabled={legs.length === 0}
+                        title="Print or Save as PDF"
+                    >
+                        <FontAwesomeIcon icon={faPrint} /> Print / Save as PDF
+                    </button>
+                </div>
             </div>
 
             {/* Empty State Dropzone for Current Day */}
@@ -754,165 +929,184 @@ export function RouteCardBuilder({
                     dofeLevel={resolvedDofeLevel}
                     onSelectLeg={(idx) => {
                         setActiveLegIndex(idx);
-                        if (viewMode !== 'split') {
-                            setViewMode('split');
+                        if (viewMode !== 'planner') {
+                            setViewMode('planner');
                         }
                     }}
                 />
             )}
 
-            {/* Split View: Map + Cards */}
-            {legs.length > 0 && viewMode === 'split' && (
-                <div className={`ems-studio-split-layout ${isMapFocusMode ? 'ems-studio-split-layout--map-focused' : ''}`}>
-                    {/* Left Pane: Interactive Map & Elevation Profile */}
-                    <div className={`ems-studio-pane ems-studio-pane--map ${isMapFocusMode ? 'ems-studio-pane--map-focused' : ''}`}>
-                        <RouteMap
-                            vertices={vertices}
-                            legs={legs}
-                            activeLegIndex={activeLegIndex}
-                            onSelectLeg={handleSelectLeg}
-                            onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
-                            onMoveCheckpoint={handleMoveCheckpoint}
-                            onDeleteCheckpoint={handleDeleteCheckpoint}
-                            ghostSplitVertexIndex={ghostSplitVertexIndex}
-                            onGhostHoverVertex={handleGhostHoverVertex}
-                            draggingCheckpoint={draggingCheckpoint}
-                            onDragCheckpointChange={handleDragCheckpointChange}
-                            osMapsApiKey={osMapsApiKey}
-                            hoveredVertexIndex={hoveredVertexIndex}
-                            onHoverVertex={handleHoverVertex}
-                            hoveredLegIndex={hoveredLegIndex}
-                            isFocusMode={isMapFocusMode}
-                            onToggleFocusMode={setIsMapFocusMode}
-                        />
+            {/* Interactive Planner View: Split Map + Journey Segment Cards */}
+            {legs.length > 0 && viewMode === 'planner' && (
+                <>
+                    <div className={`ems-studio-split-layout ${isMapFocusMode ? 'ems-studio-split-layout--map-focused' : ''}`}>
+                        {/* Left Pane: Interactive Map & Elevation Profile */}
+                        <div className={`ems-studio-pane ems-studio-pane--map ${isMapFocusMode ? 'ems-studio-pane--map-focused' : ''}`}>
+                            <RouteMap
+                                vertices={vertices}
+                                legs={legs}
+                                activeLegIndex={activeLegIndex}
+                                onSelectLeg={handleSelectLeg}
+                                onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
+                                onMoveCheckpoint={handleMoveCheckpoint}
+                                onDeleteCheckpoint={handleDeleteCheckpoint}
+                                ghostSplitVertexIndex={ghostSplitVertexIndex}
+                                onGhostHoverVertex={handleGhostHoverVertex}
+                                draggingCheckpoint={draggingCheckpoint}
+                                onDragCheckpointChange={handleDragCheckpointChange}
+                                osMapsApiKey={osMapsApiKey}
+                                hoveredVertexIndex={hoveredVertexIndex}
+                                onHoverVertex={handleHoverVertex}
+                                hoveredLegIndex={hoveredLegIndex}
+                                isFocusMode={isMapFocusMode}
+                                onToggleFocusMode={setIsMapFocusMode}
+                            />
 
-                        <RouteElevationProfile
-                            vertices={vertices}
-                            legs={legs}
-                            activeLegIndex={activeLegIndex}
-                            hoveredVertexIndex={hoveredVertexIndex}
-                            onSelectLeg={handleSelectLeg}
-                            onHoverVertex={handleHoverVertex}
-                            onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
-                            onMoveCheckpoint={handleMoveCheckpoint}
-                            onDeleteCheckpoint={handleDeleteCheckpoint}
-                            ghostSplitVertexIndex={ghostSplitVertexIndex}
-                            onGhostHoverVertex={handleGhostHoverVertex}
-                            draggingCheckpoint={draggingCheckpoint}
-                            onDragCheckpointChange={handleDragCheckpointChange}
-                        />
-                    </div>
-
-                    {/* Right Pane: Synchronized Journey Segment Cards */}
-                    <div ref={legCardsContainerRef} className="ems-studio-pane ems-studio-pane--cards">
-                        <div className="ems-cards-deck-header">
-                            <h3>Journey Legs ({legs.length})</h3>
-                            {!isMobileStepper && (
-                                <button
-                                    type="button"
-                                    className="ems-deck-toggle-btn"
-                                    onClick={() => setExpandAllLegs((prev) => !prev)}
-                                    title={expandAllLegs ? 'Collapse inactive legs to 44px summary bars' : 'Expand all legs for editing'}
-                                >
-                                    <FontAwesomeIcon icon={expandAllLegs ? faCompress : faExpand} />
-                                    <span>{expandAllLegs ? 'Collapse to Active' : 'Expand All'}</span>
-                                </button>
-                            )}
+                            <RouteElevationProfile
+                                vertices={vertices}
+                                legs={legs}
+                                activeLegIndex={activeLegIndex}
+                                hoveredVertexIndex={hoveredVertexIndex}
+                                onSelectLeg={handleSelectLeg}
+                                onHoverVertex={handleHoverVertex}
+                                onRequestSplitAtVertex={(vertexIdx) => handleSplitLeg(activeLegIndex, vertexIdx)}
+                                onMoveCheckpoint={handleMoveCheckpoint}
+                                onDeleteCheckpoint={handleDeleteCheckpoint}
+                                ghostSplitVertexIndex={ghostSplitVertexIndex}
+                                onGhostHoverVertex={handleGhostHoverVertex}
+                                draggingCheckpoint={draggingCheckpoint}
+                                onDragCheckpointChange={handleDragCheckpointChange}
+                            />
                         </div>
 
-                        {/* Mobile & Tablet Stepper Bar */}
-                        {isMobileStepper && (
-                            <div className="ems-leg-stepper-bar" role="navigation" aria-label="Leg Stepper">
-                                <button
-                                    type="button"
-                                    className="ems-stepper-btn"
-                                    onClick={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
-                                    disabled={activeLegIndex === 0}
-                                    title="Previous Leg (Alt + Left)"
-                                >
-                                    <FontAwesomeIcon icon={faChevronLeft} /> Prev
-                                </button>
-
-                                <div className="ems-stepper-center">
-                                    <span className="ems-stepper-label">
-                                        Leg {activeLegIndex + 1} of {legs.length}
-                                    </span>
-                                    <div className="ems-stepper-pills">
-                                        {legs.map((l, lIdx) => {
-                                            const isComplete = Boolean(
-                                                l.route_description &&
-                                                l.route_description.trim().length >= 10 &&
-                                                l.escape_route &&
-                                                l.escape_route.trim().length >= 5
-                                            );
-                                            const isCurrent = lIdx === activeLegIndex;
-                                            const isNew = lIdx === recentlySplitIndex;
-
-                                            return (
-                                                <button
-                                                    key={l.leg_number}
-                                                    type="button"
-                                                    className={`ems-stepper-pill ${isCurrent ? 'ems-stepper-pill--active' : ''} ${isComplete ? 'ems-stepper-pill--complete' : 'ems-stepper-pill--incomplete'} ${isNew ? 'ems-stepper-pill--flash' : ''}`}
-                                                    onClick={() => setActiveLegIndex(lIdx)}
-                                                    title={`Jump to Leg ${l.leg_number} (${l.start_name} → ${l.end_name})`}
-                                                >
-                                                    {l.leg_number}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="ems-stepper-btn"
-                                    onClick={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
-                                    disabled={activeLegIndex === legs.length - 1}
-                                    title="Next Leg (Alt + Right)"
-                                >
-                                    Next <FontAwesomeIcon icon={faChevronRight} />
-                                </button>
+                        {/* Right Pane: Synchronized Journey Segment Cards */}
+                        <div ref={legCardsContainerRef} className="ems-studio-pane ems-studio-pane--cards">
+                            <div className="ems-cards-deck-header">
+                                <h3>Journey Legs ({legs.length})</h3>
+                                {!isMobileStepper && (
+                                    <button
+                                        type="button"
+                                        className="ems-deck-toggle-btn"
+                                        onClick={() => setExpandAllLegs((prev) => !prev)}
+                                        title={expandAllLegs ? 'Collapse inactive legs to 44px summary bars' : 'Expand all legs for editing'}
+                                    >
+                                        <FontAwesomeIcon icon={expandAllLegs ? faCompress : faExpand} />
+                                        <span>{expandAllLegs ? 'Collapse to Active' : 'Expand All'}</span>
+                                    </button>
+                                )}
                             </div>
-                        )}
 
-                        <div className="ems-leg-cards-list">
-                            {legs.map((leg, idx) => {
-                                if (isMobileStepper && idx !== activeLegIndex) {
-                                    return null;
-                                }
-                                const isCardExpanded = isMobileStepper ? true : (expandAllLegs || idx === activeLegIndex);
-                                return (
-                                    <RouteLegCard
-                                        key={leg.leg_number}
-                                        leg={leg}
-                                        vertices={vertices}
-                                        isActive={idx === activeLegIndex}
-                                        isExpanded={isCardExpanded}
-                                        isLastLeg={idx === legs.length - 1}
-                                        nextLegStartName={legs[idx + 1]?.start_name}
-                                        onSelect={() => setActiveLegIndex(idx)}
-                                        onHoverLeg={(hovered) => setHoveredLegIndex(hovered ? idx : null)}
-                                        onUpdateLeg={(updated) => handleUpdateLeg(idx, updated)}
-                                        onSplitLeg={() => handleSplitLeg(idx)}
-                                        onMergeLeg={() => handleMergeLeg(idx)}
-                                        onPrevLeg={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
-                                        onNextLeg={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
-                                        autoFocusField={idx === activeLegIndex ? autoFocusSplitField : null}
-                                    />
-                                );
-                            })}
+                            {/* Mobile & Tablet Stepper Bar */}
+                            {isMobileStepper && (
+                                <div className="ems-leg-stepper-bar" role="navigation" aria-label="Leg Stepper">
+                                    <button
+                                        type="button"
+                                        className="ems-stepper-btn"
+                                        onClick={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
+                                        disabled={activeLegIndex === 0}
+                                        title="Previous Leg (Alt + Left)"
+                                    >
+                                        <FontAwesomeIcon icon={faChevronLeft} /> Prev
+                                    </button>
+
+                                    <div className="ems-stepper-center">
+                                        <span className="ems-stepper-label">
+                                            Leg {activeLegIndex + 1} of {legs.length}
+                                        </span>
+                                        <div className="ems-stepper-pills">
+                                            {legs.map((l, lIdx) => {
+                                                const isComplete = Boolean(
+                                                    l.route_description &&
+                                                    l.route_description.trim().length >= 10 &&
+                                                    l.escape_route &&
+                                                    l.escape_route.trim().length >= 5
+                                                );
+                                                const isCurrent = lIdx === activeLegIndex;
+                                                const isNew = lIdx === recentlySplitIndex;
+
+                                                return (
+                                                    <button
+                                                        key={l.leg_number}
+                                                        type="button"
+                                                        className={`ems-stepper-pill ${isCurrent ? 'ems-stepper-pill--active' : ''} ${isComplete ? 'ems-stepper-pill--complete' : 'ems-stepper-pill--incomplete'} ${isNew ? 'ems-stepper-pill--flash' : ''}`}
+                                                        onClick={() => setActiveLegIndex(lIdx)}
+                                                        title={`Jump to Leg ${l.leg_number} (${l.start_name} → ${l.end_name})`}
+                                                    >
+                                                        {l.leg_number}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="ems-stepper-btn"
+                                        onClick={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
+                                        disabled={activeLegIndex === legs.length - 1}
+                                        title="Next Leg (Alt + Right)"
+                                    >
+                                        Next <FontAwesomeIcon icon={faChevronRight} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="ems-leg-cards-list">
+                                {legs.map((leg, idx) => {
+                                    if (isMobileStepper && idx !== activeLegIndex) {
+                                        return null;
+                                    }
+                                    const isCardExpanded = isMobileStepper ? true : (expandAllLegs || idx === activeLegIndex);
+                                    return (
+                                        <RouteLegCard
+                                            key={leg.leg_number}
+                                            leg={leg}
+                                            vertices={vertices}
+                                            scheduleItem={legSchedule[idx]}
+                                            isActive={idx === activeLegIndex}
+                                            isExpanded={isCardExpanded}
+                                            isLastLeg={idx === legs.length - 1}
+                                            nextLegStartName={legs[idx + 1]?.start_name}
+                                            onSelect={() => setActiveLegIndex(idx)}
+                                            onHoverLeg={(hovered) => setHoveredLegIndex(hovered ? idx : null)}
+                                            onUpdateLeg={(updated) => handleUpdateLeg(idx, updated)}
+                                            onSplitLeg={() => handleSplitLeg(idx)}
+                                            onMergeLeg={() => handleMergeLeg(idx)}
+                                            onPrevLeg={() => setActiveLegIndex((prev) => Math.max(0, prev - 1))}
+                                            onNextLeg={() => setActiveLegIndex((prev) => Math.min(legs.length - 1, prev + 1))}
+                                            autoFocusField={idx === activeLegIndex ? autoFocusSplitField : null}
+                                        />
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    {/* Print container: rendered for printing full route card even from planner view */}
+                    <div className="ems-print-only" aria-hidden="true">
+                        <RouteLegTable
+                            legs={legs}
+                            headerData={headerData}
+                            onUpdateHeaderData={handleUpdateHeaderData}
+                            activeLegIndex={activeLegIndex}
+                            onSelectLeg={handleSelectLeg}
+                            onUpdateLeg={handleUpdateLeg}
+                            onSplitLeg={handleSplitLeg}
+                            onMergeLeg={handleMergeLeg}
+                        />
+                    </div>
+                </>
             )}
 
-            {/* Table View: 12-Column Desktop Grid */}
-            {legs.length > 0 && viewMode === 'table' && (
+            {/* Route Card View: Comprehensive DofE Full-Width Table */}
+            {legs.length > 0 && viewMode === 'routecard' && (
                 <div className="ems-studio-table-layout">
                     <RouteLegTable
                         legs={legs}
+                        headerData={headerData}
+                        onUpdateHeaderData={handleUpdateHeaderData}
                         activeLegIndex={activeLegIndex}
-                        onSelectLeg={(idx) => setActiveLegIndex(idx)}
+                        onSelectLeg={handleSelectLeg}
                         onUpdateLeg={handleUpdateLeg}
                         onSplitLeg={handleSplitLeg}
                         onMergeLeg={handleMergeLeg}
